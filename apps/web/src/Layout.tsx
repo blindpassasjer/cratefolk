@@ -10,7 +10,7 @@ export function Logo() {
   return (
     <span className="flex items-center gap-2 text-lg font-semibold tracking-tight">
       <img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" className="size-8" />
-      WaxCrate
+      <span className="hidden sm:inline">WaxCrate</span>
     </span>
   )
 }
@@ -18,18 +18,18 @@ export function Logo() {
 export default function Layout() {
   const { user, logout } = useAuth()
   const link = ({ isActive }: { isActive: boolean }) =>
-    `flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors ${
+    `flex items-center gap-2 rounded-md px-2.5 py-2 text-sm transition-colors sm:px-3 ${
       isActive ? 'bg-ink-800 text-ink-100' : 'text-ink-300 hover:text-ink-100'
     }`
 
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-10 border-b border-ink-800 bg-ink-950/80 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-7xl items-center gap-6 px-4">
+        <div className="mx-auto flex h-14 max-w-7xl items-center gap-2 px-4 sm:gap-6">
           <Link to="/">
             <Logo />
           </Link>
-          <nav className="flex flex-1 items-center gap-1">
+          <nav className="flex min-w-0 flex-1 items-center gap-0.5 sm:gap-1">
             <NavLink to="/" end className={link}>
               Collection
             </NavLink>
@@ -38,7 +38,7 @@ export default function Layout() {
             </NavLink>
             {user?.role === 'admin' && (
               <NavLink to="/admin" className={link}>
-                <Users className="size-4" /> Users
+                <Users className="size-4" /> <span className="hidden sm:inline">Users</span>
               </NavLink>
             )}
           </nav>
@@ -50,9 +50,11 @@ export default function Layout() {
           <ThemeToggle />
           <button
             onClick={() => void logout()}
-            className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-ink-300 hover:text-ink-100"
+            title="Sign out"
+            aria-label="Sign out"
+            className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-ink-300 hover:text-ink-100 sm:px-3"
           >
-            <LogOut className="size-4" /> Sign out
+            <LogOut className="size-4" /> <span className="hidden sm:inline">Sign out</span>
           </button>
         </div>
       </header>
@@ -70,7 +72,7 @@ export default function Layout() {
           </button>
         </div>
       )}
-      <main className="mx-auto max-w-7xl px-4 py-8">
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:py-8">
         <Outlet />
       </main>
     </div>

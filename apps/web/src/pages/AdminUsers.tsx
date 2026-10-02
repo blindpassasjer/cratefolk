@@ -76,7 +76,7 @@ export default function AdminUsers() {
       {loadError && <p className="text-sm text-danger">{loadError}</p>}
 
       <div className="overflow-x-auto rounded-xl border border-ink-800">
-        <table className="w-full text-left text-sm">
+        <table className="w-full min-w-[40rem] text-left text-sm">
           <thead className="border-b border-ink-800 text-ink-500">
             <tr>
               <th className="px-4 py-3 font-medium">Name</th>
