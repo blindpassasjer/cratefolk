@@ -1,10 +1,11 @@
-import { Disc3, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Disc3, Pencil, Plus, Settings2, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import AddRecord from '../AddRecord'
 import { api, type CollectionGroup, type Copy } from '../api'
 import CollectionPicker from '../CollectionPicker'
 import Cover from '../Cover'
+import ManageCollections from '../ManageCollections'
 import ShareExport from '../ShareExport'
 
 export default function Collection() {
@@ -15,6 +16,7 @@ export default function Collection() {
   const [groups, setGroups] = useState<CollectionGroup[]>([])
   const [totalCount, setTotalCount] = useState<number | null>(null)
   const [adding, setAdding] = useState(false)
+  const [managing, setManaging] = useState(false)
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -70,23 +72,6 @@ export default function Collection() {
     })
   }
 
-  function rename() {
-    const name = active && window.prompt('Rename collection', active.name)
-    if (name && name.trim() && active) void run(async () => {
-      await api(`/collections/${active.id}`, { method: 'PATCH', json: { name } })
-      await loadGroups()
-    })
-  }
-
-  function remove() {
-    if (active && window.confirm(`Delete the collection "${active.name}"? The records in it stay in your library.`)) {
-      void run(async () => {
-        await api(`/collections/${active.id}`, { method: 'DELETE' })
-        select(null)
-      })
-    }
-  }
-
   const chip = (isActive: boolean) =>
     `shrink-0 rounded-full border px-3 py-1 text-sm transition-colors ${
       isActive ? 'border-wax bg-wax text-on-wax' : 'border-ink-700 text-ink-300 hover:border-ink-500 hover:text-ink-100'
@@ -102,11 +87,11 @@ export default function Collection() {
         <div className="flex items-center gap-2">
           {active && (
             <>
-              <button onClick={rename} aria-label="Rename collection" title="Rename" className="rounded-md p-2 text-ink-500 hover:text-ink-100">
-                <Pencil className="size-4" />
+              <button onClick={() => setManaging(true)} className="flex items-center gap-1.5 rounded-md px-2.5 py-2 text-sm text-ink-300 hover:text-ink-100">
+                <Pencil className="size-4" /> Rename
               </button>
-              <button onClick={remove} aria-label="Delete collection" title="Delete collection" className="rounded-md p-2 text-ink-500 hover:text-danger">
-                <Trash2 className="size-4" />
+              <button onClick={() => setManaging(true)} className="flex items-center gap-1.5 rounded-md px-2.5 py-2 text-sm text-ink-300 hover:text-danger">
+                <Trash2 className="size-4" /> Delete
               </button>
             </>
           )}
@@ -132,6 +117,11 @@ export default function Collection() {
             <span className="ml-1.5 opacity-70">{g.count}</span>
           </button>
         ))}
+        {groups.length > 0 && (
+          <button onClick={() => setManaging(true)} className="flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-sm text-ink-500 hover:text-ink-100">
+            <Settings2 className="size-3.5" /> Manage
+          </button>
+        )}
         {creating ? (
           <form onSubmit={create} className="flex shrink-0 items-center gap-1.5">
             <input
@@ -180,6 +170,21 @@ export default function Collection() {
           </div>
         ))}
       </div>
+
+      {managing && (
+        <ManageCollections
+          groups={groups}
+          onClose={() => setManaging(false)}
+          onChanged={(deletedId) => {
+            if (deletedId && deletedId === activeId) {
+              setManaging(false)
+              select(null)
+            } else {
+              void load()
+            }
+          }}
+        />
+      )}
 
       {adding && <AddRecord onClose={() => setAdding(false)} onAdded={() => void load()} />}
     </div>
