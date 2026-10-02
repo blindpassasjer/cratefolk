@@ -31,6 +31,7 @@ export default function AddRecord({
   const [adding, setAdding] = useState<number | null>(null)
   const [status, setStatus] = useState<Status>({ owned: {}, wishlisted: [] })
   const inputRef = useRef<HTMLInputElement>(null)
+  const latest = useRef(0)
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -40,18 +41,21 @@ export default function AddRecord({
   }, [onClose])
 
   async function run(params: { mode: Mode; term: string; allFormats: boolean }, page: number) {
+    const mine = ++latest.current
     setLoading(true)
     try {
       const qs = new URLSearchParams({ [params.mode]: params.term, page: String(page) })
       if (params.allFormats) qs.set('allFormats', '1')
       const res = await api<SearchResponse>(`/discogs/search?${qs}`)
-      setStatus(await api<Status>(`/status?ids=${res.results.map((r) => r.id).join(',')}`))
+      const status = await api<Status>(`/status?ids=${res.results.map((r) => r.id).join(',')}`)
+      if (mine !== latest.current) return // a newer search or page was requested meanwhile
+      setStatus(status)
       setData(res)
       setSearched(params)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Search failed')
     } finally {
-      setLoading(false)
+      if (mine === latest.current) setLoading(false)
     }
   }
 
@@ -81,7 +85,7 @@ export default function AddRecord({
   const current = MODES.find((m) => m.id === mode)!
 
   return (
-    <div className="fixed inset-0 z-20 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm sm:pt-[8vh]" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="fixed inset-0 z-20 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm sm:pt-[8vh]" onMouseDown={(e) => !manual && e.target === e.currentTarget && onClose()}>
       {manual ? (
         <ManualRecord target={defaultTarget} onBack={() => setManual(false)} onClose={onClose} onAdded={onAdded} />
       ) : (

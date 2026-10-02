@@ -47,12 +47,20 @@ const headers = (): Record<string, string> => ({
   ...(config.discogsToken ? { Authorization: `Discogs token=${config.discogsToken}` } : {}),
 })
 
+const TIMEOUT_MS = 20_000
+
+/** A hung or unreachable Discogs must not block the queue, and surfaces as a 502 rather than a crash. */
+const fetchDiscogs = (url: URL | string) =>
+  fetch(url, { headers: headers(), signal: AbortSignal.timeout(TIMEOUT_MS) }).catch(() => {
+    throw new DiscogsError('Could not reach Discogs', 502)
+  })
+
 async function getJson<T>(path: string, params: Record<string, string> = {}, priority = 1): Promise<T> {
   const url = new URL(BASE + path)
   for (const [k, v] of Object.entries(params)) if (v) url.searchParams.set(k, v)
 
   for (let attempt = 0; ; attempt++) {
-    const res = await schedule(() => fetch(url, { headers: headers() }), priority)
+    const res = await schedule(() => fetchDiscogs(url), priority)
     if (res.status === 429 && attempt < 3) {
       const retryAfter = Number(res.headers.get('retry-after')) || 5
       await new Promise((r) => setTimeout(r, retryAfter * 1000))
@@ -236,7 +244,7 @@ export async function downloadImage(url: string): Promise<Buffer | null> {
   try {
     const { hostname, protocol } = new URL(url)
     if (protocol !== 'https:' || !hostname.endsWith('.discogs.com')) return null
-    const res = await fetch(url, { headers: headers() })
+    const res = await fetch(url, { headers: headers(), signal: AbortSignal.timeout(TIMEOUT_MS) })
     if (!res.ok || !res.headers.get('content-type')?.startsWith('image/')) return null
     const buf = Buffer.from(await res.arrayBuffer())
     return buf.length <= MAX_IMAGE_BYTES ? buf : null

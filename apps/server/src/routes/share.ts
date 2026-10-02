@@ -131,11 +131,25 @@ publicShareRoutes.get('/:token', (c) => {
   )
 })
 
+/** Whether a release is part of the shared set, without building the whole item list. */
+function inShare(share: ShareRow, releaseId: number): boolean {
+  const q = (sql: string, ...args: unknown[]) => !!db.prepare(sql).get(...args)
+  if (share.kind === 'wishlist') return q('SELECT 1 FROM wishlist WHERE user_id = ? AND release_id = ?', share.user_id, releaseId)
+  if (share.kind === 'forsale') return q('SELECT 1 FROM copies WHERE user_id = ? AND release_id = ? AND for_sale = 1', share.user_id, releaseId)
+  if (share.kind === 'group') {
+    return q(
+      'SELECT 1 FROM copies c JOIN collection_copies cc ON cc.copy_id = c.id WHERE c.user_id = ? AND c.release_id = ? AND cc.collection_id = ?',
+      share.user_id, releaseId, share.group_id,
+    )
+  }
+  return q('SELECT 1 FROM copies WHERE user_id = ? AND release_id = ?', share.user_id, releaseId)
+}
+
 publicShareRoutes.get('/:token/cover/:releaseId', (c) => {
   const share = lookup(c.req.param('token'))
   const releaseId = Number(c.req.param('releaseId'))
   // Only covers of records that are actually in the shared set can be fetched.
-  if (!share || !Number.isInteger(releaseId) || !itemsFor(share).some((i) => (i as { releaseId: number }).releaseId === releaseId)) {
+  if (!share || !Number.isInteger(releaseId) || !inShare(share, releaseId)) {
     return c.json({ error: 'Not found' }, 404)
   }
   const file = coverPath(releaseId)

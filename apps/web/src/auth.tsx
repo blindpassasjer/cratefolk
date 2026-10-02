@@ -39,8 +39,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [refresh],
   )
 
+  useEffect(() => {
+    const onUnauthorized = () => setUser(null)
+    window.addEventListener('waxcrate:unauthorized', onUnauthorized)
+    return () => window.removeEventListener('waxcrate:unauthorized', onUnauthorized)
+  }, [])
+
   const logout = useCallback(async () => {
-    await api('/auth/logout', { method: 'POST' })
+    try {
+      await api('/auth/logout', { method: 'POST' })
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not sign out')
+      return
+    }
     setUser(null)
     toast.info('Signed out')
   }, [toast])

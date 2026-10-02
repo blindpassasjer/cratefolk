@@ -33,7 +33,7 @@ export const SORTS: { key: SortKey; label: string }[] = [
 
 export type Filters = { format: string; decade: string; country: string }
 
-type Sortable = Searchable & { askingPrice?: number | null }
+type Sortable = Searchable & { askingPrice?: number | null; priceCurrency?: string | null }
 
 const formatTags = (format: string) => format.split(',').map((t) => t.trim()).filter(Boolean)
 const decadeOf = (year: number | null) => (year ? String(Math.floor(year / 10) * 10) : '')
@@ -73,7 +73,8 @@ export function sortItems<T extends Sortable>(items: T[], key: SortKey): T[] {
     title: (a, b) => text(a.title, b.title) || text(a.artist, b.artist),
     'year-desc': (a, b) => num(a.year, b.year, -1),
     'year-asc': (a, b) => num(a.year, b.year, 1),
-    price: (a, b) => num(a.askingPrice, b.askingPrice, 1),
+    // Prices in different currencies can't be compared without exchange rates, so group by currency first.
+    price: (a, b) => (a.askingPrice == null || b.askingPrice == null ? 0 : (a.priceCurrency ?? '').localeCompare(b.priceCurrency ?? '')) || num(a.askingPrice, b.askingPrice, 1),
   }
   const cmp = by[key]
   return cmp ? [...items].sort(cmp) : items

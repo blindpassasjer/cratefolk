@@ -1,5 +1,5 @@
 import { Archive, Disc3, Pencil, Plus, Settings2, Tag, Trash2 } from 'lucide-react'
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import AddRecord from '../AddRecord'
 import { api, type CollectionGroup, type Copy } from '../api'
@@ -39,12 +39,19 @@ export default function Collection() {
     setGroups((await api<{ collections: CollectionGroup[] }>('/collections')).collections)
   }, [])
 
+  const latest = useRef(0)
+
   const load = useCallback(async () => {
+    const mine = ++latest.current
     try {
       const qs = activeId ? `?collection=${activeId}` : sale ? '?forSale=1' : ''
       const [{ copies }] = await Promise.all([api<{ copies: Copy[] }>(`/collection${qs}`), loadGroups()])
+      // The "All records" and "For sale" chips need the unfiltered totals even while a crate or the sale view is open.
+      const everything = activeId || sale ? (await api<{ copies: Copy[] }>('/collection')).copies : copies
+      if (mine !== latest.current) return // a newer load started meanwhile; don't overwrite it with older data
       setCopies(copies)
-      if (!activeId && !sale) setTotalCount(copies.length)
+      setTotalCount(everything.length)
+      setSaleCount(everything.filter((c) => c.forSale).length)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load your collection')
     }
@@ -54,13 +61,6 @@ export default function Collection() {
     void load()
   }, [load])
 
-  // The "All records" and "For sale" counts need the unfiltered totals even while a filter is open.
-  useEffect(() => {
-    void api<{ copies: Copy[] }>('/collection').then((r) => {
-      setTotalCount(r.copies.length)
-      setSaleCount(r.copies.filter((c) => c.forSale).length)
-    })
-  }, [activeId, sale, copies])
 
   // Search text, sort and filters survive switching between collections.
   const withQuery = (p: Record<string, string>) => {
@@ -114,7 +114,7 @@ export default function Collection() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{active ? active.name : sale ? 'For sale' : 'Collection'}</h1>
           {copies && shown && (
@@ -123,14 +123,14 @@ export default function Collection() {
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {active && (
             <>
-              <button onClick={() => setManaging(true)} className="flex items-center gap-1.5 rounded-md px-2.5 py-2 text-sm text-ink-300 hover:text-ink-100">
-                <Pencil className="size-4" /> Rename
+              <button title="Rename" aria-label="Rename" onClick={() => setManaging(true)} className="flex items-center gap-1.5 rounded-md px-2.5 py-2 text-sm text-ink-300 hover:text-ink-100">
+                <Pencil className="size-4" /> <span className="hidden sm:inline">Rename</span>
               </button>
-              <button onClick={() => setManaging(true)} className="flex items-center gap-1.5 rounded-md px-2.5 py-2 text-sm text-ink-300 hover:text-danger">
-                <Trash2 className="size-4" /> Delete
+              <button title="Delete" aria-label="Delete" onClick={() => setManaging(true)} className="flex items-center gap-1.5 rounded-md px-2.5 py-2 text-sm text-ink-300 hover:text-danger">
+                <Trash2 className="size-4" /> <span className="hidden sm:inline">Delete</span>
               </button>
             </>
           )}

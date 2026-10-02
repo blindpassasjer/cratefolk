@@ -16,5 +16,7 @@ export const config = {
   adminPassword: required('ADMIN_PASSWORD'),
   discogsToken: process.env.DISCOGS_TOKEN?.trim() || null,
   cookieSecure: process.env.COOKIE_SECURE === 'true',
+  // Only honour X-Forwarded-For when a reverse proxy you control sets it; otherwise clients can spoof it.
+  trustProxy: process.env.TRUST_PROXY === 'true',
   webDir: path.resolve(process.env.WEB_DIR ?? '../web/dist'),
 }

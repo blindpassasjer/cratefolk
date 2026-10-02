@@ -162,6 +162,7 @@ and set `COOKIE_SECURE=true` in `.env` so the session cookie is only sent over H
 | `ADMIN_PASSWORD` | — (required) | Password of the admin account, re-synced on every start |
 | `DISCOGS_TOKEN` | empty | Discogs personal access token; raises the rate limit and enables search thumbnails |
 | `COOKIE_SECURE` | `false` | Set to `true` when served over HTTPS |
+| `TRUST_PROXY` | `false` | Set to `true` only behind a reverse proxy that sets `X-Forwarded-For`; used for login rate limiting |
 | `PORT` | `6170` | Port the server listens on. Preset in the Docker image, only set it for local runs |
 | `DATA_DIR` | `./data` | Where the database and covers are stored. Preset to `/data` in the Docker image |
 | `WEB_DIR` | `../web/dist` | Where the built web app is served from. Preset in the Docker image |

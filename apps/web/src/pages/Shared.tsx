@@ -35,11 +35,12 @@ export default function Shared() {
   const { token } = useParams()
   const [data, setData] = useState<SharedView | null>(null)
   const [gone, setGone] = useState(false)
+  const [failed, setFailed] = useState(false)
 
   useEffect(() => {
     api<SharedView>(`/shared/${token}`)
       .then(setData)
-      .catch((e) => e instanceof ApiError && e.status === 404 ? setGone(true) : console.error(e))
+      .catch((e) => (e instanceof ApiError && e.status === 404 ? setGone(true) : setFailed(true)))
   }, [token])
 
   useEffect(() => {
@@ -59,6 +60,12 @@ export default function Shared() {
           <div className="py-24 text-center">
             <h1 className="text-xl font-semibold">This link is no longer available</h1>
             <p className="mt-2 text-sm text-ink-500">The owner may have stopped sharing it.</p>
+          </div>
+        )}
+        {failed && (
+          <div className="py-24 text-center">
+            <h1 className="text-xl font-semibold">Could not load this link</h1>
+            <p className="mt-2 text-sm text-ink-500">Check your connection and reload the page.</p>
           </div>
         )}
         {data && (

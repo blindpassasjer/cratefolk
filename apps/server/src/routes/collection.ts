@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { requireUser, type AppEnv } from '../auth.js'
 import { db } from '../db.js'
 import { DiscogsError } from '../discogs.js'
-import { coverPath, createManualRelease, ensureRelease } from '../releases.js'
+import { canAccessRelease, coverPath, createManualRelease, ensureRelease } from '../releases.js'
 
 export const collectionRoutes = new Hono<AppEnv>()
 export const releaseRoutes = new Hono<AppEnv>()
@@ -55,7 +55,7 @@ collectionRoutes.post('/', async (c) => {
   if (!parsed.success) return c.json({ error: 'Invalid request' }, 400)
   const { releaseId, mediaCondition, sleeveCondition, notes } = parsed.data
   try {
-    await ensureRelease(releaseId)
+    await ensureRelease(releaseId, c.get('user').id)
   } catch (err) {
     if (err instanceof DiscogsError) return c.json({ error: err.message }, err.status === 404 ? 404 : 502)
     throw err
@@ -137,7 +137,15 @@ const manualSchema = z.object({
 // Records that aren't on Discogs. Add the copy or wishlist item afterwards with the returned releaseId.
 releaseRoutes.post('/manual', async (c) => {
   const parsed = manualSchema.safeParse(await c.req.json().catch(() => null))
-  if (!parsed.success) return c.json({ error: 'Title and artist are required' }, 400)
+  if (!parsed.success) {
+    const path = String(parsed.error.issues[0]?.path[0] ?? '')
+    const message =
+      path === 'title' || path === 'artist' ? 'Title and artist are required'
+      : path === 'year' ? 'Year must be between 1850 and 2200'
+      : path === 'tracklist' ? 'Check the tracklist (up to 200 tracks)'
+      : 'Check the details you entered'
+    return c.json({ error: message }, 400)
+  }
   const { cover, ...rest } = parsed.data
   let image: Buffer | null = null
   if (cover) {
@@ -145,13 +153,13 @@ releaseRoutes.post('/manual', async (c) => {
     if (!m) return c.json({ error: 'Cover must be a JPEG image' }, 400)
     image = Buffer.from(m[1]!, 'base64')
   }
-  return c.json({ releaseId: createManualRelease({ ...rest, cover: image }) }, 201)
+  return c.json({ releaseId: createManualRelease({ ...rest, cover: image }, c.get('user').id) }, 201)
 })
 
 releaseRoutes.get('/:id/cover', (c) => {
   const id = Number(c.req.param('id'))
   const file = coverPath(id)
-  if (!Number.isInteger(id) || !fs.existsSync(file)) return c.json({ error: 'No cover' }, 404)
+  if (!Number.isInteger(id) || !canAccessRelease(id, c.get('user').id) || !fs.existsSync(file)) return c.json({ error: 'No cover' }, 404)
   return c.body(fs.readFileSync(file), 200, {
     'Content-Type': 'image/jpeg',
     'Cache-Control': 'private, max-age=31536000, immutable',
@@ -160,6 +168,7 @@ releaseRoutes.get('/:id/cover', (c) => {
 
 releaseRoutes.get('/:id', (c) => {
   const id = Number(c.req.param('id'))
+  if (!Number.isInteger(id) || !canAccessRelease(id, c.get('user').id)) return c.json({ error: 'Release not found' }, 404)
   const r = db
     .prepare(
       `SELECT id, master_id AS masterId, title, artist, year, country, label, catno, barcode, format,

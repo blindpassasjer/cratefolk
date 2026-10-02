@@ -128,6 +128,14 @@ const migrations: string[] = [
   ALTER TABLE shares_new RENAME TO shares;
   CREATE UNIQUE INDEX shares_target ON shares(user_id, kind, COALESCE(group_id, 0));
   `,
+  `
+  -- Records added by hand (negative IDs) belong to the user who made them; Discogs releases stay shared.
+  ALTER TABLE releases ADD COLUMN owner_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+  UPDATE releases SET owner_id = COALESCE(
+    (SELECT user_id FROM copies WHERE release_id = releases.id ORDER BY id LIMIT 1),
+    (SELECT user_id FROM wishlist WHERE release_id = releases.id ORDER BY id LIMIT 1)
+  ) WHERE id < 0;
+  `,
 ]
 
 fs.mkdirSync(config.dataDir, { recursive: true })

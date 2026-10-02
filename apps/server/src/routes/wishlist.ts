@@ -34,7 +34,7 @@ wishlistRoutes.post('/', async (c) => {
   if (!parsed.success) return c.json({ error: 'Invalid request' }, 400)
   const { releaseId, notes } = parsed.data
   try {
-    await ensureRelease(releaseId)
+    await ensureRelease(releaseId, c.get('user').id)
   } catch (err) {
     if (err instanceof DiscogsError) return c.json({ error: err.message }, err.status === 404 ? 404 : 502)
     throw err

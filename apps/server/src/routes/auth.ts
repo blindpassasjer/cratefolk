@@ -1,4 +1,5 @@
-import { Hono } from 'hono'
+import { getConnInfo } from '@hono/node-server/conninfo'
+import { Hono, type Context } from 'hono'
 import { z } from 'zod'
 import {
   createSession,
@@ -15,10 +16,32 @@ import { CURRENCIES } from '../discogs.js'
 
 export const authRoutes = new Hono<AppEnv>()
 
-// Naive in-memory throttle: 10 failed attempts per email+IP per 15 minutes.
+// Naive in-memory throttle over 15 minutes: 10 failed attempts per email+IP, and 40 per IP across all emails.
+// The IP is the socket address; X-Forwarded-For is only used with TRUST_PROXY=true, as clients can fake it.
 const failures = new Map<string, { count: number; resetAt: number }>()
 const WINDOW_MS = 15 * 60_000
 const MAX_FAILURES = 10
+const MAX_FAILURES_PER_IP = 40
+
+const clientIp = (c: Context) =>
+  (config.trustProxy ? c.req.header('x-forwarded-for')?.split(',')[0]?.trim() : undefined) ||
+  getConnInfo(c).remote.address ||
+  'unknown'
+
+const blocked = (key: string, max: number) => {
+  const e = failures.get(key)
+  return !!e && e.resetAt > Date.now() && e.count >= max
+}
+
+function recordFailure(...keys: string[]) {
+  const now = Date.now()
+  if (failures.size > 5000) for (const [k, e] of failures) if (e.resetAt <= now) failures.delete(k)
+  for (const key of keys) {
+    const e = failures.get(key)
+    if (e && e.resetAt > now) e.count++
+    else failures.set(key, { count: 1, resetAt: now + WINDOW_MS })
+  }
+}
 
 const loginSchema = z.object({ email: z.string().email(), password: z.string().min(1) })
 
@@ -27,9 +50,10 @@ authRoutes.post('/login', async (c) => {
   if (!parsed.success) return c.json({ error: 'Email and password required' }, 400)
   const email = parsed.data.email.toLowerCase()
 
-  const key = `${email}|${c.req.header('x-forwarded-for') ?? 'direct'}`
-  const entry = failures.get(key)
-  if (entry && entry.resetAt > Date.now() && entry.count >= MAX_FAILURES) {
+  const ip = clientIp(c)
+  const key = `${email}|${ip}`
+  const ipKey = `ip|${ip}`
+  if (blocked(key, MAX_FAILURES) || blocked(ipKey, MAX_FAILURES_PER_IP)) {
     return c.json({ error: 'Too many attempts, try again later' }, 429)
   }
 
@@ -38,9 +62,7 @@ authRoutes.post('/login', async (c) => {
     .get(email) as { id: number; password_hash: string; disabled: number } | undefined
   const ok = user && !user.disabled && (await verifyPassword(parsed.data.password, user.password_hash))
   if (!ok) {
-    const fresh = entry && entry.resetAt > Date.now() ? entry : { count: 0, resetAt: Date.now() + WINDOW_MS }
-    fresh.count++
-    failures.set(key, fresh)
+    recordFailure(key, ipKey)
     return c.json({ error: 'Invalid email or password' }, 401)
   }
 

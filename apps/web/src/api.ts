@@ -19,6 +19,8 @@ async function realApi<T>(path: string, init?: RequestInit & { json?: unknown })
     throw new ApiError('Could not reach the server. Check your connection and try again.', 0)
   })
   const data = await res.json().catch(() => ({}))
+  // Session expired or account disabled mid-use: let the auth provider send the user back to the login page.
+  if (res.status === 401 && !path.startsWith('/auth/login')) window.dispatchEvent(new Event('waxcrate:unauthorized'))
   if (!res.ok) throw new ApiError((data as { error?: string }).error ?? res.statusText, res.status)
   return data as T
 }
