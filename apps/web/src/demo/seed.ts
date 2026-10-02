@@ -133,6 +133,8 @@ export interface DemoState {
   groups: Array<{ id: number; name: string }>
   groupCopies: Array<{ groupId: number; copyId: number }>
   shares: Array<{ token: string; kind: 'all' | 'group' | 'wishlist' | 'forsale'; groupId: number | null }>
+  /** Records added by hand (negative IDs), with their cover as a data: URL. Optional: older saved demos lack it. */
+  manual?: Array<{ release: ReleaseDetail; cover: string | null }>
   users: Array<{ id: number; email: string; name: string; role: 'admin' | 'user'; currency: string; disabled: number; createdAt: string }>
 }
 

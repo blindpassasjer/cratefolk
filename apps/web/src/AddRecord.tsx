@@ -1,6 +1,7 @@
 import { Check, Disc3, Heart, Loader2, Search, X } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { api, type SearchResponse, type SearchResult, type Status } from './api'
+import ManualRecord from './ManualRecord'
 import { useToast } from './notify'
 
 type Mode = 'q' | 'catno' | 'barcode'
@@ -19,6 +20,7 @@ export default function AddRecord({
   onAdded: () => void
   defaultTarget?: 'collection' | 'wishlist'
 }) {
+  const [manual, setManual] = useState(false)
   const [mode, setMode] = useState<Mode>('q')
   const [term, setTerm] = useState('')
   const [allFormats, setAllFormats] = useState(false)
@@ -80,6 +82,9 @@ export default function AddRecord({
 
   return (
     <div className="fixed inset-0 z-20 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm sm:pt-[8vh]" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      {manual ? (
+        <ManualRecord target={defaultTarget} onBack={() => setManual(false)} onClose={onClose} onAdded={onAdded} />
+      ) : (
       <div className="w-full max-w-2xl rounded-xl border border-ink-700 bg-ink-900 shadow-2xl">
         <div className="flex items-center justify-between border-b border-ink-800 px-4 py-3">
           <h2 className="font-semibold">{defaultTarget === 'wishlist' ? 'Find a record to wishlist' : 'Add a record from Discogs'}</h2>
@@ -209,8 +214,15 @@ export default function AddRecord({
               </button>
             </div>
           )}
+          <p className="px-2 py-3 text-center text-xs text-ink-500">
+            Not on Discogs?{' '}
+            <button type="button" onClick={() => setManual(true)} className="text-wax hover:underline">
+              Add it manually
+            </button>
+          </p>
         </div>
       </div>
+      )}
     </div>
   )
 }

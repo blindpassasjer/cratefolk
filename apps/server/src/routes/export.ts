@@ -9,7 +9,7 @@ exportRoutes.use('*', requireUser)
 const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
 const joinJson = (value: unknown) => (JSON.parse(String(value ?? '[]')) as string[]).join(', ')
-const discogsUrl = (id: number) => `https://www.discogs.com/release/${id}`
+const discogsUrl = (id: number) => (id > 0 ? `https://www.discogs.com/release/${id}` : '')
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'export'
 
 interface Column {
@@ -64,9 +64,10 @@ interface Row {
 
 const shape = (r: Row) => ({
   ...r,
+  releaseId: r.releaseId > 0 ? r.releaseId : '', // manual records have no Discogs ID
   genres: joinJson(r.genres),
   styles: joinJson(r.styles),
-  link: { text: discogsUrl(r.releaseId), hyperlink: discogsUrl(r.releaseId) },
+  link: discogsUrl(r.releaseId) ? { text: discogsUrl(r.releaseId), hyperlink: discogsUrl(r.releaseId) } : '',
 })
 
 // All owned records, or just one collection with ?collection=ID, or only copies for sale with ?forSale=1.

@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { requireUser, type AppEnv } from '../auth.js'
 import { db } from '../db.js'
 import { DiscogsError } from '../discogs.js'
-import { coverPath, ensureRelease } from '../releases.js'
+import { coverPath, createManualRelease, ensureRelease } from '../releases.js'
 
 export const collectionRoutes = new Hono<AppEnv>()
 export const releaseRoutes = new Hono<AppEnv>()
@@ -44,7 +44,7 @@ collectionRoutes.get('/', (c) => {
 })
 
 const addSchema = z.object({
-  releaseId: z.number().int().positive(),
+  releaseId: z.number().int().refine((n) => n !== 0), // negative IDs are records added by hand
   mediaCondition: condition.optional(),
   sleeveCondition: condition.optional(),
   notes: z.string().max(2000).optional(),
@@ -112,6 +112,40 @@ collectionRoutes.delete('/:id', (c) => {
     .prepare('DELETE FROM copies WHERE id = ? AND user_id = ?')
     .run(Number(c.req.param('id')), c.get('user').id)
   return res.changes ? c.json({ ok: true }) : c.json({ error: 'Copy not found' }, 404)
+})
+
+const text = (max: number) => z.string().trim().max(max).nullish().transform((v) => v || null)
+const manualSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  artist: z.string().trim().min(1).max(200),
+  year: z.number().int().min(1850).max(2200).nullish().transform((v) => v ?? null),
+  country: text(60),
+  label: text(120),
+  catno: text(60),
+  barcode: text(40),
+  format: text(120),
+  genres: z.array(z.string().trim().min(1).max(60)).max(10).default([]),
+  tracklist: z
+    .array(z.object({ position: z.string().trim().max(10), title: z.string().trim().min(1).max(200), duration: z.string().trim().max(10).default('') }))
+    .max(200)
+    .default([]),
+  notes: text(2000),
+  // data: URL of a JPEG, resized by the browser first
+  cover: z.string().max(4_000_000).nullish(),
+})
+
+// Records that aren't on Discogs. Add the copy or wishlist item afterwards with the returned releaseId.
+releaseRoutes.post('/manual', async (c) => {
+  const parsed = manualSchema.safeParse(await c.req.json().catch(() => null))
+  if (!parsed.success) return c.json({ error: 'Title and artist are required' }, 400)
+  const { cover, ...rest } = parsed.data
+  let image: Buffer | null = null
+  if (cover) {
+    const m = /^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/.exec(cover)
+    if (!m) return c.json({ error: 'Cover must be a JPEG image' }, 400)
+    image = Buffer.from(m[1]!, 'base64')
+  }
+  return c.json({ releaseId: createManualRelease({ ...rest, cover: image }) }, 201)
 })
 
 releaseRoutes.get('/:id/cover', (c) => {

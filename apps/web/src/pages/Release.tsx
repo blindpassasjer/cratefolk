@@ -85,7 +85,7 @@ export default function Release() {
   async function remove(copyId: number) {
     const ok = await confirm({
       title: 'Remove this copy?',
-      message: 'It will be taken out of your collection and any crates it is in. The record stays on Discogs.',
+      message: 'It will be taken out of your collection and any crates it is in.',
       confirmLabel: 'Remove copy',
       danger: true,
     })
@@ -129,8 +129,12 @@ export default function Release() {
           </dl>
 
           <section className="space-y-1.5">
-            <h2 className="text-sm font-medium text-ink-300">On Discogs marketplace</h2>
-            <Market releaseId={r.id} currency={user?.currency ?? 'USD'} search={`${r.artist} ${r.title}`} />
+            {r.id > 0 && (
+              <>
+                <h2 className="text-sm font-medium text-ink-300">On Discogs marketplace</h2>
+                <Market releaseId={r.id} currency={user?.currency ?? 'USD'} search={`${r.artist} ${r.title}`} />
+              </>
+            )}
             {copies.some((c) => c.forSale && c.askingPrice != null) && (
               <p className="text-xs text-ink-500">
                 Your asking {copies.filter((c) => c.forSale && c.askingPrice != null).length === 1 ? 'price' : 'prices'}:{' '}

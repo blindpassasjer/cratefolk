@@ -24,7 +24,7 @@ wishlistRoutes.get('/', (c) =>
 )
 
 const addSchema = z.object({
-  releaseId: z.number().int().positive(),
+  releaseId: z.number().int().refine((n) => n !== 0), // negative IDs are records added by hand
   notes: z.string().max(2000).optional(),
 })
 

@@ -45,7 +45,11 @@ const on = (method: string, pattern: string, fn: Handler) =>
 const fail = (message: string, status = 400): never => {
   throw new ApiError(message, status)
 }
-const release = (id: number): ReleaseDetail => RELEASES.get(id) ?? fail('Release not found', 404)
+const release = (id: number): ReleaseDetail =>
+  RELEASES.get(id) ?? load().manual?.find((m) => m.release.id === id)?.release ?? fail('Release not found', 404)
+
+/** Cover of a hand-added record, for Cover.tsx (the demo has no image endpoint). */
+export const manualCover = (id: number): string | null => (id < 0 ? (load().manual?.find((m) => m.release.id === id)?.cover ?? null) : null)
 const byName = <T extends { name: string }>(a: T, b: T) => a.name.localeCompare(b.name)
 const byArtist = (a: { artist: string; title: string }, b: { artist: string; title: string }) =>
   a.artist.localeCompare(b.artist) || a.title.localeCompare(b.title)
@@ -141,6 +145,26 @@ on('DELETE', '/collection/:id', (m) => {
   return { ok: true }
 })
 
+on('POST', '/releases/manual', (_m, _q, b) => {
+  const s = load()
+  const str = (v: unknown) => String(v ?? '').trim() || null
+  const title = str(b.title)
+  const artist = str(b.artist)
+  if (!title || !artist) fail('Title and artist are required')
+  const manual = (s.manual ??= [])
+  const id = Math.min(0, ...manual.map((m) => m.release.id)) - 1
+  const year = Number(b.year)
+  manual.push({
+    cover: typeof b.cover === 'string' ? b.cover : null,
+    release: {
+      id, masterId: null, title: title!, artist: artist!, year: Number.isInteger(year) && year > 0 ? year : null,
+      country: str(b.country), label: str(b.label), catno: str(b.catno), barcode: str(b.barcode), format: str(b.format) ?? '',
+      genres: (b.genres as string[] | undefined) ?? [], styles: [], tracklist: (b.tracklist as ReleaseDetail['tracklist'] | undefined) ?? [],
+      notes: str(b.notes), hasCover: typeof b.cover === 'string' ? 1 : 0,
+    },
+  })
+  return { releaseId: id }
+})
 on('GET', '/releases/:id', (m) => {
   const s = load()
   const id = Number(m[1])

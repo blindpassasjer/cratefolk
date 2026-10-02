@@ -80,7 +80,14 @@ export default function Shared() {
             </div>
             <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
               {data.items.map((i) => (
-                <a key={i.copyId ?? i.releaseId} href={IS_DEMO ? `https://www.discogs.com/search/?type=release&q=${encodeURIComponent(`${i.artist} ${i.title}`)}` : `https://www.discogs.com/release/${i.releaseId}`} target="_blank" rel="noreferrer" className="group relative block">
+                <a
+                  key={i.copyId ?? i.releaseId}
+                  // Records added by hand (negative IDs) have no Discogs page
+                  href={i.releaseId < 0 ? undefined : IS_DEMO ? `https://www.discogs.com/search/?type=release&q=${encodeURIComponent(`${i.artist} ${i.title}`)}` : `https://www.discogs.com/release/${i.releaseId}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="group relative block"
+                >
                   <Cover
                     releaseId={i.releaseId}
                     hasCover={!!i.hasCover}

@@ -51,7 +51,8 @@ without installing anything.
 ## Features
 
 - 💿 **Add records from Discogs** — search by artist/album, catalog number or barcode; the exact
-  pressing, tracklist, label and cover are saved locally
+  pressing, tracklist, label and cover are saved locally. Not on Discogs? Add the record by hand,
+  with your own cover photo and tracklist
 - 🗂️ **Every copy is its own entry** — own two copies of a record? Grade each one separately (media and
   sleeve, Goldmine scale) and add notes
 - 📦 **Crates** — group records any way you like ("Jazz", "90s", "Listening room"); a copy can live in
