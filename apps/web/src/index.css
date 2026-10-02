@@ -1,33 +1,53 @@
 @import 'tailwindcss';
 
-@theme {
-  --color-ink-950: #0b0b0d;
-  --color-ink-900: #121215;
-  --color-ink-800: #1a1a1f;
-  --color-ink-700: #26262d;
-  --color-ink-500: #6b6b78;
-  --color-ink-300: #a8a8b5;
-  --color-ink-100: #ececf1;
-  --color-wax: #f59e0b;
-  --color-wax-hover: #fbbf24;
-  --color-on-wax: #0b0b0d;
-  --color-danger: #f87171;
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+/* Palettes live in plain variables so they can change at runtime. Tailwind's own theme
+   variables are resolved at build time, which silently dropped a light-theme override and
+   baked opacity variants (bg-ink-950/80) to fixed dark colors. */
+:root {
+  --ink-950: #0b0b0d;
+  --ink-900: #121215;
+  --ink-800: #1a1a1f;
+  --ink-700: #26262d;
+  --ink-500: #6b6b78;
+  --ink-300: #a8a8b5;
+  --ink-100: #ececf1;
+  --wax: #f59e0b;
+  --wax-hover: #fbbf24;
+  --on-wax: #0b0b0d;
+  --danger: #f87171;
 }
 
-/* Light theme: the ink scale is inverted so every bg-ink-*/text-ink-* utility flips with it. */
+/* Light theme: the ink scale is inverted, so every ink-based utility (bg, text, border) flips with it. */
 :root[data-theme='light'] {
-  --color-ink-950: #faf8f5;
-  --color-ink-900: #f2efea;
-  --color-ink-800: #e8e4de;
-  --color-ink-700: #d3cec6;
-  --color-ink-500: #766f64;
-  --color-ink-300: #4f4a43;
-  --color-ink-100: #1a1815;
-  --color-wax: #b45309;
-  --color-wax-hover: #92400e;
-  --color-on-wax: #ffffff;
-  --color-danger: #dc2626;
+  --ink-950: #faf8f5;
+  --ink-900: #f2efea;
+  --ink-800: #e8e4de;
+  --ink-700: #d3cec6;
+  --ink-500: #766f64;
+  --ink-300: #4f4a43;
+  --ink-100: #1a1815;
+  --wax: #b45309;
+  --wax-hover: #92400e;
+  --on-wax: #ffffff;
+  --danger: #dc2626;
+}
+
+@theme inline {
+  --color-ink-950: var(--ink-950);
+  --color-ink-900: var(--ink-900);
+  --color-ink-800: var(--ink-800);
+  --color-ink-700: var(--ink-700);
+  --color-ink-500: var(--ink-500);
+  --color-ink-300: var(--ink-300);
+  --color-ink-100: var(--ink-100);
+  --color-wax: var(--wax);
+  --color-wax-hover: var(--wax-hover);
+  --color-on-wax: var(--on-wax);
+  --color-danger: var(--danger);
+}
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 html {
@@ -44,8 +64,8 @@ body,
 }
 
 body {
-  background: var(--color-ink-950);
-  color: var(--color-ink-100);
+  background: var(--ink-950);
+  color: var(--ink-100);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
