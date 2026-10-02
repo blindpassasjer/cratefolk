@@ -2,7 +2,7 @@ import { Check, Disc3, Heart, Loader2, Search, X } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { api, type SearchResponse, type SearchResult, type Status } from './api'
 import ManualRecord from './ManualRecord'
-import { useToast } from './notify'
+import { useDialog, useToast } from './notify'
 
 type Mode = 'q' | 'catno' | 'barcode'
 const MODES: Array<{ id: Mode; label: string; placeholder: string }> = [
@@ -28,6 +28,7 @@ export default function AddRecord({
   const [searched, setSearched] = useState<{ mode: Mode; term: string; allFormats: boolean } | null>(null)
   const [loading, setLoading] = useState(false)
   const toast = useToast()
+  const { confirm } = useDialog()
   const [adding, setAdding] = useState<number | null>(null)
   const [status, setStatus] = useState<Status>({ owned: {}, wishlisted: [] })
   const inputRef = useRef<HTMLInputElement>(null)
@@ -35,7 +36,8 @@ export default function AddRecord({
 
   useEffect(() => {
     inputRef.current?.focus()
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    // A confirm dialog on top handles its own Escape; don't close the whole search with it.
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !document.querySelector('[aria-modal="true"]') && onClose()
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
@@ -65,6 +67,15 @@ export default function AddRecord({
   }
 
   async function add(r: SearchResult, target: 'collection' | 'wishlist') {
+    const owned = status.owned[r.id] ?? 0
+    if (target === 'collection' && owned > 0) {
+      const another = await confirm({
+        title: 'You already own this',
+        message: `You have ${owned === 1 ? 'a copy' : `${owned} copies`} of “${r.title}”. Add another copy?`,
+        confirmLabel: 'Add another copy',
+      })
+      if (!another) return
+    }
     setAdding(r.id)
     try {
       await api(`/${target}`, { method: 'POST', json: { releaseId: r.id } })

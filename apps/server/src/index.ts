@@ -12,6 +12,7 @@ import { authRoutes } from './routes/auth.js'
 import { collectionRoutes, releaseRoutes } from './routes/collection.js'
 import { exportRoutes } from './routes/export.js'
 import { groupRoutes } from './routes/groups.js'
+import { statsRoutes } from './routes/stats.js'
 import { publicShareRoutes, shareRoutes } from './routes/share.js'
 import { discogsRoutes } from './routes/discogs.js'
 import { marketRoutes, statusRoutes, wishlistRoutes } from './routes/wishlist.js'
@@ -35,6 +36,7 @@ app.route('/api/shared', publicShareRoutes)
 app.route('/api/releases', releaseRoutes)
 app.route('/api/wishlist', wishlistRoutes)
 app.route('/api/status', statusRoutes)
+app.route('/api/stats', statsRoutes)
 app.route('/api/market', marketRoutes)
 app.all('/api/*', (c) => c.json({ error: 'Not found' }, 404))
 

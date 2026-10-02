@@ -1,4 +1,4 @@
-import { ApiError, type AdminUser, type Copy, type ReleaseDetail, type SearchResult, type WishItem } from '../api'
+import { ApiError, type AdminUser, type Copy, type ReleaseDetail, type SearchResult, type Stats, type WishItem } from '../api'
 import { CATALOG, RELEASES, seedState, type DemoState, type StoredCopy } from './seed'
 
 // In-browser stand-in for the server, used by the GitHub Pages demo (VITE_DEMO=true).
@@ -145,25 +145,54 @@ on('DELETE', '/collection/:id', (m) => {
   return { ok: true }
 })
 
-on('POST', '/releases/manual', (_m, _q, b) => {
-  const s = load()
-  const str = (v: unknown) => String(v ?? '').trim() || null
+const str = (v: unknown) => String(v ?? '').trim() || null
+
+/** The editable fields of a hand-added record, validated like the server does. */
+function manualFields(b: Body) {
   const title = str(b.title)
   const artist = str(b.artist)
   if (!title || !artist) fail('Title and artist are required')
-  const manual = (s.manual ??= [])
-  const id = Math.min(0, ...manual.map((m) => m.release.id)) - 1
   const year = Number(b.year)
+  if (b.year != null && b.year !== '' && !(Number.isInteger(year) && year >= 1850 && year <= 2200)) fail('Year must be between 1850 and 2200')
+  return {
+    title: title!, artist: artist!, year: b.year == null || b.year === '' ? null : year,
+    country: str(b.country), label: str(b.label), catno: str(b.catno), barcode: str(b.barcode), format: str(b.format) ?? '',
+    genres: (b.genres as string[] | undefined) ?? [], tracklist: (b.tracklist as ReleaseDetail['tracklist'] | undefined) ?? [],
+    notes: str(b.notes),
+  }
+}
+
+on('POST', '/releases/manual', (_m, _q, b) => {
+  const s = load()
+  const f = manualFields(b)
+  const manual = (s.manual ??= [])
+  const dupe = manual.find((m) => m.release.artist.toLowerCase() === f.artist.toLowerCase() && m.release.title.toLowerCase() === f.title.toLowerCase())
+  if (dupe && !b.force) fail(`You already added “${f.title}” by ${f.artist}`, 409)
+  const id = Math.min(0, ...manual.map((m) => m.release.id)) - 1
   manual.push({
     cover: typeof b.cover === 'string' ? b.cover : null,
-    release: {
-      id, masterId: null, title: title!, artist: artist!, year: Number.isInteger(year) && year > 0 ? year : null,
-      country: str(b.country), label: str(b.label), catno: str(b.catno), barcode: str(b.barcode), format: str(b.format) ?? '',
-      genres: (b.genres as string[] | undefined) ?? [], styles: [], tracklist: (b.tracklist as ReleaseDetail['tracklist'] | undefined) ?? [],
-      notes: str(b.notes), hasCover: typeof b.cover === 'string' ? 1 : 0,
-    },
+    release: { id, masterId: null, ...f, styles: [], hasCover: typeof b.cover === 'string' ? 1 : 0 },
   })
   return { releaseId: id }
+})
+const manualRecord = (id: string | undefined) => load().manual?.find((m) => m.release.id === Number(id)) ?? fail('Release not found', 404)
+on('PATCH', '/releases/:id', (m, _q, b) => {
+  const rec = manualRecord(m[1])
+  Object.assign(rec.release, manualFields(b))
+  if (typeof b.cover === 'string') rec.cover = b.cover
+  else if (b.cover === null) rec.cover = null
+  rec.release.hasCover = rec.cover ? 1 : 0
+  return { ok: true }
+})
+on('DELETE', '/releases/:id', (m) => {
+  const s = load()
+  const rec = manualRecord(m[1])
+  const gone = new Set(s.copies.filter((c) => c.releaseId === rec.release.id).map((c) => c.id))
+  s.copies = s.copies.filter((c) => !gone.has(c.id))
+  s.groupCopies = s.groupCopies.filter((g) => !gone.has(g.copyId))
+  s.wishlist = s.wishlist.filter((w) => w.releaseId !== rec.release.id)
+  s.manual = s.manual!.filter((x) => x !== rec)
+  return { ok: true }
 })
 on('GET', '/releases/:id', (m) => {
   const s = load()
@@ -348,6 +377,62 @@ on('DELETE', '/admin/users/:id', (m) => {
   load().users = load().users.filter((x) => x !== u)
   return { ok: true }
 })
+
+// ---- stats ----
+const tally = (labels: string[], limit = 10) => {
+  const counts = new Map<string, number>()
+  for (const l of labels) if (l) counts.set(l, (counts.get(l) ?? 0) + 1)
+  return [...counts].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count || a.label.localeCompare(b.label)).slice(0, limit)
+}
+on('GET', '/stats', (): Stats => {
+  const s = load()
+  const rows = [...s.copies].sort((a, b) => b.addedAt.localeCompare(a.addedAt) || b.id - a.id).map((c) => ({ c, r: release(c.releaseId) }))
+  const decades = new Map<number, number>()
+  for (const { r } of rows) if (r.year) decades.set(Math.floor(r.year / 10) * 10, (decades.get(Math.floor(r.year / 10) * 10) ?? 0) + 1)
+  const today = new Date()
+  const months = Array.from({ length: 12 }, (_, i) => {
+    const key = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - (11 - i), 1)).toISOString().slice(0, 7)
+    return { label: key, count: rows.filter(({ c }) => c.addedAt.startsWith(key)).length }
+  })
+  // Same formula as the demo's marketplace line, so the numbers agree with what the record pages show.
+  const perRelease = new Map<number, number>()
+  for (const { c } of rows) if (c.releaseId > 0) perRelease.set(c.releaseId, (perRelease.get(c.releaseId) ?? 0) + 1)
+  let estimated = 0
+  for (const [id, n] of perRelease) estimated += (9 + ((id * 13) % 40)) * n
+  const forSale = new Map<string, { total: number; count: number }>()
+  for (const { c } of rows) {
+    if (!c.forSale) continue
+    const cur = c.priceCurrency ?? s.me.currency
+    const e = forSale.get(cur) ?? { total: 0, count: 0 }
+    if (c.askingPrice != null) e.total += c.askingPrice
+    e.count += c.askingPrice != null ? 1 : 0
+    forSale.set(cur, e)
+  }
+  return {
+    copies: rows.length,
+    releases: new Set(rows.map(({ c }) => c.releaseId)).size,
+    wishlist: s.wishlist.length,
+    forSale: rows.filter(({ c }) => c.forSale).length,
+    byDecade: [...decades].sort((a, b) => a[0] - b[0]).map(([d, count]) => ({ label: `${d}s`, count })),
+    byFormat: tally(rows.flatMap(({ r }) => r.format.split(',').map((t) => t.trim()))),
+    byGenre: tally(rows.flatMap(({ r }) => r.genres)),
+    byCountry: tally(rows.map(({ r }) => r.country ?? '')),
+    topArtists: tally(rows.map(({ r }) => r.artist)),
+    topLabels: tally(rows.map(({ r }) => r.label ?? '')),
+    addedByMonth: months,
+    recent: rows.slice(0, 6).map(({ r }) => ({ releaseId: r.id, title: r.title, artist: r.artist, hasCover: r.hasCover })),
+    value: { currency: s.me.currency, estimated, pricedReleases: perRelease.size, totalReleases: perRelease.size },
+    forSaleValue: [...forSale].map(([currency, v]) => ({ currency, ...v })),
+  }
+})
+
+// ---- password reset links (the demo has no real accounts, so these only show the flow) ----
+on('POST', '/admin/users/:id/reset-link', (m) => {
+  if (userById(m[1]).role === 'admin') fail('The admin password is set through the ADMIN_PASSWORD environment variable')
+  return { token: 'demo-reset-token', expiresAt: Date.now() + 86_400_000 }
+})
+on('GET', '/auth/reset/:token', () => ({ name: 'Demo user', email: 'user@example.com' }))
+on('POST', '/auth/reset', () => ({ ok: true }))
 
 export async function mockApi<T>(path: string, init?: RequestInit & { json?: unknown }): Promise<T> {
   const url = new URL(path, 'http://demo')

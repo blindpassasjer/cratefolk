@@ -52,7 +52,8 @@ without installing anything.
 
 - 💿 **Add records from Discogs** — search by artist/album, catalog number or barcode; the exact
   pressing, tracklist, label and cover are saved locally. Not on Discogs? Add the record by hand,
-  with your own cover photo and tracklist
+  with your own cover photo and tracklist (you can edit or delete these later). Adding a record you
+  already own asks first
 - 🗂️ **Every copy is its own entry** — own two copies of a record? Grade each one separately (media and
   sleeve, Goldmine scale) and add notes
 - 📦 **Crates** — group records any way you like ("Jazz", "90s", "Listening room"); a copy can live in
@@ -65,8 +66,11 @@ without installing anything.
   share a public "records I'm selling" page with grades and prices
 - 🔗 **Share links** — a public, read-only link for your whole library, a single crate, your wishlist or
   your for-sale list. Notes stay private, and you can revoke a link at any time
+- 📈 **Stats** — records by decade, format, genre, artist and label, what you added recently, and the
+  value of your for-sale copies
 - 📊 **Excel export** — download your collection, a crate, the for-sale list or the wishlist as `.xlsx`
-- 👥 **Multiple users** — the admin creates accounts; everyone gets their own private collection
+- 👥 **Multiple users** — the admin creates accounts (and hands out one-time password reset links);
+  everyone gets their own private collection
 - 💱 **Prices in your currency** and a light/dark theme that follows your system
 - 🐳 **One container** — the API, the web app and an SQLite database, nothing else to run
 

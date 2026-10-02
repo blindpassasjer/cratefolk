@@ -5,6 +5,8 @@ import Account from './pages/Account'
 import Collection from './pages/Collection'
 import Login from './pages/Login'
 import Release from './pages/Release'
+import ResetPassword from './pages/ResetPassword'
+import Stats from './pages/Stats'
 import Shared from './pages/Shared'
 import Wishlist from './pages/Wishlist'
 
@@ -20,10 +22,12 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/s/:token" element={<Shared />} />
+      <Route path="/reset/:token" element={<ResetPassword />} />
       <Route element={<RequireAuth />}>
         <Route element={<Layout />}>
           <Route index element={<Collection />} />
           <Route path="wishlist" element={<Wishlist />} />
+          <Route path="stats" element={<Stats />} />
           <Route path="account" element={<Account />} />
           <Route path="release/:id" element={<Release />} />
           <Route path="admin" element={<Navigate to="/account" replace />} />

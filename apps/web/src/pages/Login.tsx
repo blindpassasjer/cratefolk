@@ -54,7 +54,7 @@ export default function Login() {
           {busy ? 'Signing in…' : 'Sign in'}
         </button>
         <p className="text-center text-xs text-ink-500">
-          {IS_DEMO ? 'This is a demo: any email and password works.' : 'Accounts are created by your admin.'}
+          {IS_DEMO ? 'This is a demo: any email and password works.' : 'Accounts are created by your admin. Forgot your password? Ask them for a reset link.'}
         </p>
       </form>
     </div>

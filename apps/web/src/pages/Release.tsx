@@ -1,10 +1,11 @@
-import { ArrowLeft, Heart, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Heart, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../auth'
 import Market, { money } from '../Market'
 import { api, GRADES, type CollectionGroup, type Grade, type OwnedCopy, type ReleaseDetail } from '../api'
 import CollectionPicker from '../CollectionPicker'
+import ManualRecord from '../ManualRecord'
 import { useDialog, useToast } from '../notify'
 import Cover from '../Cover'
 
@@ -44,8 +45,10 @@ export default function Release() {
   const [data, setData] = useState<{ release: ReleaseDetail; copies: OwnedCopy[]; wishlisted: { id: number } | null } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [groups, setGroups] = useState<CollectionGroup[]>([])
+  const [editing, setEditing] = useState(false)
   const toast = useToast()
   const { confirm } = useDialog()
+  const navigate = useNavigate()
 
   const load = useCallback(async () => {
     try {
@@ -92,6 +95,23 @@ export default function Release() {
     if (ok) await act(() => api(`/collection/${copyId}`, { method: 'DELETE' }), 'Copy removed from your collection')
   }
 
+  async function deleteRecord() {
+    const ok = await confirm({
+      title: 'Delete this record?',
+      message: 'This record you added by hand will be deleted, together with your copies of it and any wishlist entry. This cannot be undone.',
+      confirmLabel: 'Delete record',
+      danger: true,
+    })
+    if (!ok) return
+    try {
+      await api(`/releases/${id}`, { method: 'DELETE' })
+      toast.success('Record deleted')
+      navigate('/', { replace: true })
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not delete the record')
+    }
+  }
+
   if (error) return <p className="text-sm text-danger">{error}</p>
   if (!data) return null
   const { release: r, copies, wishlisted } = data
@@ -117,6 +137,16 @@ export default function Release() {
           <div>
             <h1 className="text-3xl font-semibold tracking-tight">{r.title}</h1>
             <p className="mt-1 text-lg text-ink-300">{r.artist}</p>
+            {r.id < 0 && (
+              <div className="mt-3 flex gap-4 text-sm">
+                <button onClick={() => setEditing(true)} className="flex items-center gap-1.5 text-ink-300 hover:text-ink-100">
+                  <Pencil className="size-3.5" /> Edit record
+                </button>
+                <button onClick={() => void deleteRecord()} className="flex items-center gap-1.5 text-ink-500 hover:text-danger">
+                  <Trash2 className="size-3.5" /> Delete record
+                </button>
+              </div>
+            )}
           </div>
 
           <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 text-sm">
@@ -214,6 +244,12 @@ export default function Release() {
           )}
         </div>
       </div>
+
+      {editing && (
+        <div className="fixed inset-0 z-20 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm sm:pt-[8vh]">
+          <ManualRecord release={r} onClose={() => setEditing(false)} onAdded={() => void load()} />
+        </div>
+      )}
     </div>
   )
 }

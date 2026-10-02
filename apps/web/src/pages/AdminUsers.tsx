@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { Check, Copy } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { api, type AdminUser } from '../api'
 import { useDialog, useToast } from '../notify'
 
@@ -11,6 +12,7 @@ export default function AdminUsers() {
   const { confirm, prompt } = useDialog()
   const [loadError, setLoadError] = useState<string | null>(null)
   const [form, setForm] = useState({ name: '', email: '', password: '' })
+  const [link, setLink] = useState<{ email: string; url: string } | null>(null)
 
   const load = useCallback(async () => {
     setUsers((await api<{ users: AdminUser[] }>('/admin/users')).users)
@@ -48,6 +50,15 @@ export default function AdminUsers() {
       validate: (v) => (v.length < 8 ? 'Use at least 8 characters' : null),
     })
     if (password) void run(() => api(`/admin/users/${u.id}`, { method: 'PATCH', json: { password } }), `Password reset for ${u.email}`)
+  }
+
+  async function createResetLink(u: AdminUser) {
+    try {
+      const { token } = await api<{ token: string }>(`/admin/users/${u.id}/reset-link`, { method: 'POST' })
+      setLink({ email: u.email, url: `${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, '')}/reset/${token}` })
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not create a reset link')
+    }
   }
 
   async function remove(u: AdminUser) {
@@ -96,7 +107,8 @@ export default function AdminUsers() {
                 <td className="space-x-4 px-4 py-3 text-right">
                   {u.role !== 'admin' && (
                     <>
-                      <button className={action} onClick={() => void resetPassword(u)}>Reset password</button>
+                      <button className={action} onClick={() => void createResetLink(u)}>Reset link</button>
+                      <button className={action} onClick={() => void resetPassword(u)}>Set password</button>
                       <button
                         className={action}
                         onClick={() => void run(() => api(`/admin/users/${u.id}`, { method: 'PATCH', json: { disabled: !u.disabled } }), u.disabled ? `Enabled ${u.email}` : `Disabled ${u.email}`)}
@@ -112,6 +124,52 @@ export default function AdminUsers() {
           </tbody>
         </table>
       </div>
+
+      {link && <ResetLinkDialog link={link} onClose={() => setLink(null)} />}
     </section>
+  )
+}
+
+/** Shows a freshly made reset link once, for the admin to copy and send to the user. */
+function ResetLinkDialog({ link, onClose }: { link: { email: string; url: string }; onClose: () => void }) {
+  const [copied, setCopied] = useState(false)
+  const field = useRef<HTMLInputElement>(null)
+  const toast = useToast()
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(link.url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      field.current?.select() // clipboard API needs HTTPS; fall back to manual copy
+      toast.info('Press Ctrl/Cmd+C to copy the selected link')
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div role="dialog" aria-modal="true" aria-label="Password reset link" className="w-full max-w-md space-y-4 rounded-xl border border-ink-700 bg-ink-900 p-5 shadow-2xl">
+        <div className="space-y-1.5">
+          <h2 className="font-semibold">Reset link for {link.email}</h2>
+          <p className="text-sm text-ink-300">Send them this link. It works once and expires in 24 hours. Creating a new link replaces this one, and you can't view it again after closing.</p>
+        </div>
+        <div className="flex gap-2">
+          <input ref={field} readOnly value={link.url} onFocus={(e) => e.currentTarget.select()} className="min-w-0 flex-1 rounded-md border border-ink-700 bg-ink-950 px-2 py-1.5 text-xs outline-none focus:border-wax" />
+          <button onClick={() => void copy()} aria-label="Copy link" className="flex items-center gap-1 rounded-md border border-ink-700 px-2.5 hover:border-wax">
+            {copied ? <Check className="size-4 text-wax" /> : <Copy className="size-4" />}
+          </button>
+        </div>
+        <div className="flex justify-end">
+          <button onClick={onClose} className="rounded-md border border-ink-700 px-4 py-2 text-sm hover:border-ink-500">Done</button>
+        </div>
+      </div>
+    </div>
   )
 }

@@ -7,6 +7,7 @@ import {
   destroySession,
   hashPassword,
   requireUser,
+  sha256,
   verifyPassword,
   type AppEnv,
 } from '../auth.js'
@@ -132,5 +133,36 @@ authRoutes.post('/password', requireUser, async (c) => {
   }
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(await hashPassword(parsed.data.newPassword), user.id)
   destroyOtherSessions(c, user.id)
+  return c.json({ ok: true })
+})
+
+// ---- Resetting a forgotten password with a link from the admin (public) ----
+
+const resetLookup = (token: string) =>
+  db
+    .prepare(
+      `SELECT u.id, u.name, u.email FROM password_resets p JOIN users u ON u.id = p.user_id
+       WHERE p.token_hash = ? AND p.expires_at > ? AND u.disabled = 0`,
+    )
+    .get(sha256(token), Date.now()) as { id: number; name: string; email: string } | undefined
+
+const RESET_INVALID = 'This reset link is invalid or has expired. Ask your admin for a new one.'
+
+authRoutes.get('/reset/:token', (c) => {
+  const user = resetLookup(c.req.param('token'))
+  return user ? c.json({ name: user.name, email: user.email }) : c.json({ error: RESET_INVALID }, 404)
+})
+
+authRoutes.post('/reset', async (c) => {
+  const parsed = z.object({ token: z.string().min(1), password: z.string().min(8).max(200) }).safeParse(await c.req.json().catch(() => null))
+  if (!parsed.success) return c.json({ error: 'The new password must be at least 8 characters' }, 400)
+  const user = resetLookup(parsed.data.token)
+  if (!user) return c.json({ error: RESET_INVALID }, 404)
+  const hash = await hashPassword(parsed.data.password)
+  db.transaction(() => {
+    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, user.id)
+    db.prepare('DELETE FROM password_resets WHERE user_id = ?').run(user.id)
+    db.prepare('DELETE FROM sessions WHERE user_id = ?').run(user.id)
+  })()
   return c.json({ ok: true })
 })

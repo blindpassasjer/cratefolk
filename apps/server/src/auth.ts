@@ -36,7 +36,7 @@ export async function verifyPassword(password: string, stored: string): Promise<
   return crypto.timingSafeEqual(actual, expected)
 }
 
-const sha256 = (value: string) => crypto.createHash('sha256').update(value).digest('hex')
+export const sha256 = (value: string) => crypto.createHash('sha256').update(value).digest('hex')
 
 export function createSession(c: Context, userId: number): void {
   const token = crypto.randomBytes(32).toString('base64url')
@@ -113,4 +113,5 @@ export async function ensureAdmin(): Promise<void> {
 
 export function purgeExpiredSessions(): void {
   db.prepare('DELETE FROM sessions WHERE expires_at <= ?').run(Date.now())
+  db.prepare('DELETE FROM password_resets WHERE expires_at <= ?').run(Date.now())
 }

@@ -1,7 +1,8 @@
 import { Disc3, ImagePlus, Loader2, X } from 'lucide-react'
-import { useState, type FormEvent, type ReactNode } from 'react'
-import { api } from './api'
-import { useToast } from './notify'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { api, ApiError, type ReleaseDetail } from './api'
+import Cover from './Cover'
+import { useDialog, useToast } from './notify'
 
 const MAX_COVER_PX = 600
 
@@ -27,22 +28,50 @@ function Field({ label, children, className = '' }: { label: string; children: R
   )
 }
 
-/** Form for a record that isn't on Discogs. Saves it, then adds it to the collection or wishlist. */
+/**
+ * Form for a record that isn't on Discogs. Without `release` it saves a new one and adds it to the collection or wishlist;
+ * with `release` it edits that record in place.
+ */
 export default function ManualRecord({
-  target,
+  target = 'collection',
+  release,
   onBack,
   onClose,
   onAdded,
 }: {
-  target: 'collection' | 'wishlist'
-  onBack: () => void
+  target?: 'collection' | 'wishlist'
+  release?: ReleaseDetail
+  onBack?: () => void
   onClose: () => void
   onAdded: () => void
 }) {
-  const [f, setF] = useState({ title: '', artist: '', year: '', label: '', catno: '', country: '', format: 'Vinyl, LP', barcode: '', genres: '', tracks: '', notes: '' })
-  const [cover, setCover] = useState<string | null>(null)
+  const editing = !!release
+  const [f, setF] = useState({
+    title: release?.title ?? '',
+    artist: release?.artist ?? '',
+    year: release?.year?.toString() ?? '',
+    label: release?.label ?? '',
+    catno: release?.catno ?? '',
+    country: release?.country ?? '',
+    format: release ? release.format : 'Vinyl, LP',
+    barcode: release?.barcode ?? '',
+    genres: release?.genres.join(', ') ?? '',
+    tracks: release?.tracklist.map((t) => t.title).join('\n') ?? '',
+    notes: release?.notes ?? '',
+  })
+  // A data: URL replaces the cover, null removes it, undefined keeps the saved one (editing) or means none (adding).
+  const [cover, setCover] = useState<string | null | undefined>(undefined)
+  const hasCover = cover ? true : cover === undefined && !!release?.hasCover
   const [saving, setSaving] = useState(false)
   const toast = useToast()
+  const { confirm } = useDialog()
+
+  useEffect(() => {
+    if (!editing) return // while adding, the surrounding dialog already handles Escape
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !document.querySelector('[aria-modal="true"]') && onClose()
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [editing, onClose])
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((s) => ({ ...s, [k]: e.target.value }))
 
   async function pickCover(file: File | undefined) {
@@ -59,29 +88,42 @@ export default function ManualRecord({
     setSaving(true)
     try {
       const year = Number(f.year)
-      const { releaseId } = await api<{ releaseId: number }>('/releases/manual', {
-        method: 'POST',
-        json: {
-          title: f.title,
-          artist: f.artist,
-          year: f.year && Number.isInteger(year) ? year : null,
-          label: f.label,
-          catno: f.catno,
-          country: f.country,
-          format: f.format,
-          barcode: f.barcode,
-          genres: f.genres.split(',').map((g) => g.trim()).filter(Boolean),
-          tracklist: f.tracks.split('\n').map((t) => t.trim()).filter(Boolean).map((title, i) => ({ position: String(i + 1), title, duration: '' })),
-          notes: f.notes,
-          cover,
-        },
-      })
-      await api(`/${target}`, { method: 'POST', json: { releaseId } })
-      toast.success(`Added “${f.title}” to your ${target}`)
+      const body = {
+        title: f.title,
+        artist: f.artist,
+        year: f.year && Number.isInteger(year) ? year : null,
+        label: f.label,
+        catno: f.catno,
+        country: f.country,
+        format: f.format,
+        barcode: f.barcode,
+        genres: f.genres.split(',').map((g) => g.trim()).filter(Boolean),
+        tracklist: f.tracks.split('\n').map((t) => t.trim()).filter(Boolean).map((title, i) => ({ position: String(i + 1), title, duration: '' })),
+        notes: f.notes,
+        cover,
+      }
+      if (release) {
+        await api(`/releases/${release.id}`, { method: 'PATCH', json: body })
+        toast.success('Saved')
+      } else {
+        const create = (force?: boolean) => api<{ releaseId: number }>('/releases/manual', { method: 'POST', json: { ...body, force } })
+        let created: { releaseId: number }
+        try {
+          created = await create()
+        } catch (err) {
+          // Same artist and title already added by hand: let the user decide.
+          if (!(err instanceof ApiError && err.status === 409)) throw err
+          const again = await confirm({ title: 'Already added', message: `${err.message}. Add it again?`, confirmLabel: 'Add again' })
+          if (!again) return setSaving(false)
+          created = await create(true)
+        }
+        await api(`/${target}`, { method: 'POST', json: { releaseId: created.releaseId } })
+        toast.success(`Added “${f.title}” to your ${target}`)
+      }
       onAdded()
       onClose()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not add record')
+      toast.error(err instanceof Error ? err.message : editing ? 'Could not save changes' : 'Could not add record')
       setSaving(false)
     }
   }
@@ -89,20 +131,33 @@ export default function ManualRecord({
   return (
     <div className="w-full max-w-2xl rounded-xl border border-ink-700 bg-ink-900 shadow-2xl">
       <div className="flex items-center justify-between border-b border-ink-800 px-4 py-3">
-        <h2 className="font-semibold">Add a record manually</h2>
+        <h2 className="font-semibold">{editing ? 'Edit record' : 'Add a record manually'}</h2>
         <button onClick={onClose} aria-label="Close" className="text-ink-500 hover:text-ink-100">
           <X className="size-5" />
         </button>
       </div>
       <form onSubmit={submit} className="space-y-4 p-4">
         <div className="flex gap-4">
-          <label className="group relative flex size-28 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-ink-700 bg-ink-800 hover:border-wax">
-            {cover ? <img src={cover} alt="" className="size-full object-cover" /> : <Disc3 className="size-8 text-ink-700" />}
-            <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-black/60 py-1 text-xs text-white">
-              <ImagePlus className="size-3" /> {cover ? 'Change' : 'Add cover'}
-            </span>
-            <input type="file" accept="image/*" className="sr-only" onChange={(e) => void pickCover(e.target.files?.[0])} />
-          </label>
+          <div className="flex shrink-0 flex-col items-start gap-1.5">
+            <label className="group relative flex size-28 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-ink-700 bg-ink-800 hover:border-wax">
+              {cover ? (
+                <img src={cover} alt="" className="size-full object-cover" />
+              ) : hasCover && release ? (
+                <Cover releaseId={release.id} hasCover className="size-full" />
+              ) : (
+                <Disc3 className="size-8 text-ink-700" />
+              )}
+              <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-black/60 py-1 text-xs text-white">
+                <ImagePlus className="size-3" /> {hasCover ? 'Change' : 'Add cover'}
+              </span>
+              <input type="file" accept="image/*" className="sr-only" onChange={(e) => void pickCover(e.target.files?.[0])} />
+            </label>
+            {hasCover && (
+              <button type="button" onClick={() => setCover(null)} className="text-xs text-ink-500 hover:text-danger">
+                Remove
+              </button>
+            )}
+          </div>
           <div className="grid min-w-0 flex-1 gap-3">
             <Field label="Artist *">
               <input required autoFocus value={f.artist} onChange={set('artist')} maxLength={200} className={input} />
@@ -144,12 +199,18 @@ export default function ManualRecord({
         </Field>
 
         <div className="flex items-center justify-between pt-1">
-          <button type="button" onClick={onBack} className="text-sm text-ink-300 hover:text-ink-100">
-            ← Back to search
-          </button>
+          {onBack ? (
+            <button type="button" onClick={onBack} className="text-sm text-ink-300 hover:text-ink-100">
+              ← Back to search
+            </button>
+          ) : (
+            <button type="button" onClick={onClose} className="text-sm text-ink-300 hover:text-ink-100">
+              Cancel
+            </button>
+          )}
           <button disabled={saving} className="flex items-center gap-2 rounded-md bg-wax px-4 py-2 text-sm font-medium text-on-wax hover:bg-wax-hover disabled:opacity-60">
             {saving && <Loader2 className="size-4 animate-spin" />}
-            {target === 'wishlist' ? 'Add to wishlist' : 'Add to collection'}
+            {editing ? 'Save changes' : target === 'wishlist' ? 'Add to wishlist' : 'Add to collection'}
           </button>
         </div>
       </form>

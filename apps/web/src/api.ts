@@ -122,3 +122,25 @@ export interface CollectionGroup {
   name: string
   count: number
 }
+
+export interface Counted {
+  label: string
+  count: number
+}
+
+export interface Stats {
+  copies: number
+  releases: number
+  wishlist: number
+  forSale: number
+  byDecade: Counted[]
+  byFormat: Counted[]
+  byGenre: Counted[]
+  byCountry: Counted[]
+  topArtists: Counted[]
+  topLabels: Counted[]
+  addedByMonth: Counted[]
+  recent: Array<{ releaseId: number; title: string; artist: string; hasCover: number }>
+  value: { currency: string; estimated: number; pricedReleases: number; totalReleases: number }
+  forSaleValue: Array<{ currency: string; total: number; count: number }>
+}

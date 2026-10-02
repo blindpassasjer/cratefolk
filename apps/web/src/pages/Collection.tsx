@@ -10,6 +10,7 @@ import ManageCollections from '../ManageCollections'
 import { useToast } from '../notify'
 import SearchBar from '../SearchBar'
 import FilterBar from '../FilterBar'
+import { useProgressive } from '../useProgressive'
 import { filterOptions, matchesFilters, matchesQuery, SORTS, sortItems, type Filters, type SortKey } from '../search'
 import ShareExport from '../ShareExport'
 
@@ -85,6 +86,7 @@ export default function Collection() {
   const filtering = !!query || Object.values(filters).some(Boolean)
   const shown = copies ? sortItems(copies.filter((c) => matchesQuery(c, query) && matchesFilters(c, filters)), sort) : null
   const options = filterOptions(copies ?? [])
+  const { visible, hasMore, sentinelRef } = useProgressive(shown, [activeId, sale, query, sort, ...Object.values(filters)].join('|'))
 
   async function run(fn: () => Promise<unknown>) {
     try {
@@ -222,7 +224,7 @@ export default function Collection() {
       )}
 
       <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-        {shown?.map((c) => (
+        {visible?.map((c) => (
           <div key={c.copyId} className="group relative">
             <Link to={`/release/${c.releaseId}`} className="block">
               <Cover releaseId={c.releaseId} hasCover={!!c.hasCover} className="rounded-md shadow-lg shadow-black/40 ring-1 ring-ink-800 transition group-hover:-translate-y-0.5 group-hover:ring-wax/60" />
@@ -241,6 +243,7 @@ export default function Collection() {
           </div>
         ))}
       </div>
+      {hasMore && <div ref={sentinelRef} className="h-10" />}
 
       {managing && (
         <ManageCollections

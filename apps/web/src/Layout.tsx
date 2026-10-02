@@ -1,4 +1,4 @@
-import { Heart, LogOut, UserRound } from 'lucide-react'
+import { BarChart3, Heart, LogOut, UserRound } from 'lucide-react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { IS_DEMO } from './api'
 import { useAuth } from './auth'
@@ -33,8 +33,11 @@ export default function Layout() {
             <NavLink to="/" end className={link}>
               Collection
             </NavLink>
-            <NavLink to="/wishlist" className={link}>
-              <Heart className="size-4" /> Wishlist
+            <NavLink to="/wishlist" className={link} title="Wishlist">
+              <Heart className="size-4" /> <span className="hidden sm:inline">Wishlist</span>
+            </NavLink>
+            <NavLink to="/stats" className={link} title="Stats">
+              <BarChart3 className="size-4" /> <span className="hidden sm:inline">Stats</span>
             </NavLink>
           </nav>
           <NavLink to="/account" className={link} title="Account settings">

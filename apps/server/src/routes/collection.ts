@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { requireUser, type AppEnv } from '../auth.js'
 import { db } from '../db.js'
 import { DiscogsError } from '../discogs.js'
-import { canAccessRelease, coverPath, createManualRelease, ensureRelease } from '../releases.js'
+import { canAccessRelease, coverPath, createManualRelease, deleteManualRelease, ensureRelease, updateManualRelease } from '../releases.js'
 
 export const collectionRoutes = new Hono<AppEnv>()
 export const releaseRoutes = new Hono<AppEnv>()
@@ -130,30 +130,64 @@ const manualSchema = z.object({
     .max(200)
     .default([]),
   notes: text(2000),
-  // data: URL of a JPEG, resized by the browser first
+  // data: URL of a JPEG, resized by the browser first. On edit: omitted keeps the cover, null removes it.
   cover: z.string().max(4_000_000).nullish(),
+  force: z.boolean().optional(), // skip the duplicate check
 })
+
+const validationMessage = (error: z.ZodError) => {
+  const path = String(error.issues[0]?.path[0] ?? '')
+  return path === 'title' || path === 'artist' ? 'Title and artist are required'
+    : path === 'year' ? 'Year must be between 1850 and 2200'
+    : path === 'tracklist' ? 'Check the tracklist (up to 200 tracks)'
+    : 'Check the details you entered'
+}
+
+/** Decodes a cover data: URL; returns undefined for "keep", null for "remove", or an error string. */
+function decodeCover(cover: string | null | undefined): Buffer | null | undefined | string {
+  if (cover === undefined) return undefined
+  if (!cover) return null
+  const m = /^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/.exec(cover)
+  return m ? Buffer.from(m[1]!, 'base64') : 'Cover must be a JPEG image'
+}
 
 // Records that aren't on Discogs. Add the copy or wishlist item afterwards with the returned releaseId.
 releaseRoutes.post('/manual', async (c) => {
   const parsed = manualSchema.safeParse(await c.req.json().catch(() => null))
-  if (!parsed.success) {
-    const path = String(parsed.error.issues[0]?.path[0] ?? '')
-    const message =
-      path === 'title' || path === 'artist' ? 'Title and artist are required'
-      : path === 'year' ? 'Year must be between 1850 and 2200'
-      : path === 'tracklist' ? 'Check the tracklist (up to 200 tracks)'
-      : 'Check the details you entered'
-    return c.json({ error: message }, 400)
+  if (!parsed.success) return c.json({ error: validationMessage(parsed.error) }, 400)
+  const { cover, force, ...rest } = parsed.data
+  const userId = c.get('user').id
+  if (!force) {
+    const dupe = db
+      .prepare('SELECT id FROM releases WHERE owner_id = ? AND id < 0 AND artist = ? COLLATE NOCASE AND title = ? COLLATE NOCASE')
+      .get(userId, rest.artist, rest.title) as { id: number } | undefined
+    if (dupe) return c.json({ error: `You already added “${rest.title}” by ${rest.artist}`, releaseId: dupe.id }, 409)
   }
-  const { cover, ...rest } = parsed.data
-  let image: Buffer | null = null
-  if (cover) {
-    const m = /^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/.exec(cover)
-    if (!m) return c.json({ error: 'Cover must be a JPEG image' }, 400)
-    image = Buffer.from(m[1]!, 'base64')
-  }
-  return c.json({ releaseId: createManualRelease({ ...rest, cover: image }, c.get('user').id) }, 201)
+  const image = decodeCover(cover)
+  if (typeof image === 'string') return c.json({ error: image }, 400)
+  return c.json({ releaseId: createManualRelease({ ...rest, cover: image ?? null }, userId) }, 201)
+})
+
+// Only the creator can edit or delete a record they added by hand.
+const manualOwned = (id: number, userId: number) => Number.isInteger(id) && id < 0 && canAccessRelease(id, userId)
+
+releaseRoutes.patch('/:id', async (c) => {
+  const id = Number(c.req.param('id'))
+  if (!manualOwned(id, c.get('user').id)) return c.json({ error: 'Release not found' }, 404)
+  const parsed = manualSchema.safeParse(await c.req.json().catch(() => null))
+  if (!parsed.success) return c.json({ error: validationMessage(parsed.error) }, 400)
+  const { cover, force: _force, ...rest } = parsed.data
+  const image = decodeCover(cover)
+  if (typeof image === 'string') return c.json({ error: image }, 400)
+  updateManualRelease(id, rest, image)
+  return c.json({ ok: true })
+})
+
+releaseRoutes.delete('/:id', (c) => {
+  const id = Number(c.req.param('id'))
+  if (!manualOwned(id, c.get('user').id)) return c.json({ error: 'Release not found' }, 404)
+  deleteManualRelease(id)
+  return c.json({ ok: true })
 })
 
 releaseRoutes.get('/:id/cover', (c) => {
@@ -162,7 +196,8 @@ releaseRoutes.get('/:id/cover', (c) => {
   if (!Number.isInteger(id) || !canAccessRelease(id, c.get('user').id) || !fs.existsSync(file)) return c.json({ error: 'No cover' }, 404)
   return c.body(fs.readFileSync(file), 200, {
     'Content-Type': 'image/jpeg',
-    'Cache-Control': 'private, max-age=31536000, immutable',
+    // Discogs covers never change; a manual record's cover can be replaced when it is edited.
+    'Cache-Control': id > 0 ? 'private, max-age=31536000, immutable' : 'private, no-cache',
   })
 })
 

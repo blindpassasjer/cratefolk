@@ -136,6 +136,15 @@ const migrations: string[] = [
     (SELECT user_id FROM wishlist WHERE release_id = releases.id ORDER BY id LIMIT 1)
   ) WHERE id < 0;
   `,
+  `
+  -- One-time password reset links, created by an admin. Only the hash of the token is stored.
+  CREATE TABLE password_resets (
+    token_hash TEXT PRIMARY KEY,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at INTEGER NOT NULL
+  );
+  CREATE INDEX password_resets_user_id ON password_resets(user_id);
+  `,
 ]
 
 fs.mkdirSync(config.dataDir, { recursive: true })

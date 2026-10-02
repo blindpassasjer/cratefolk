@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { hashPassword, requireAdmin, requireUser, type AppEnv } from '../auth.js'
+import crypto from 'node:crypto'
+import { hashPassword, requireAdmin, requireUser, sha256, type AppEnv } from '../auth.js'
 import { config } from '../config.js'
 import { db } from '../db.js'
 
@@ -72,4 +73,23 @@ adminRoutes.delete('/users/:id', (c) => {
   }
   db.prepare('DELETE FROM users WHERE id = ?').run(id)
   return c.json({ ok: true })
+})
+
+const RESET_HOURS = 24
+
+// A one-time link the admin hands to a user who forgot their password. Only the newest link per user works.
+adminRoutes.post('/users/:id/reset-link', (c) => {
+  const id = Number(c.req.param('id'))
+  const target = db.prepare('SELECT email FROM users WHERE id = ?').get(id) as { email: string } | undefined
+  if (!target) return c.json({ error: 'User not found' }, 404)
+  if (target.email === config.adminEmail) {
+    return c.json({ error: 'The admin password is set through the ADMIN_PASSWORD environment variable' }, 400)
+  }
+  const token = crypto.randomBytes(32).toString('base64url')
+  const expiresAt = Date.now() + RESET_HOURS * 3_600_000
+  db.transaction(() => {
+    db.prepare('DELETE FROM password_resets WHERE user_id = ?').run(id)
+    db.prepare('INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES (?, ?, ?)').run(sha256(token), id, expiresAt)
+  })()
+  return c.json({ token, expiresAt })
 })

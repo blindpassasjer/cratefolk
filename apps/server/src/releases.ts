@@ -80,3 +80,27 @@ export function createManualRelease(r: ManualRelease, ownerId: number): number {
     return id
   })()
 }
+
+/** Replaces the fields of a manual record. `cover`: a Buffer replaces the image, null removes it, undefined keeps it. */
+export function updateManualRelease(id: number, r: Omit<ManualRelease, 'cover'>, cover: Buffer | null | undefined): void {
+  db.transaction(() => {
+    if (cover) fs.writeFileSync(coverPath(id), cover)
+    else if (cover === null) fs.rmSync(coverPath(id), { force: true })
+    db.prepare(
+      `UPDATE releases SET title = @title, artist = @artist, year = @year, country = @country, label = @label,
+         catno = @catno, barcode = @barcode, format = @format, genres = @genres, tracklist = @tracklist, notes = @notes
+       WHERE id = @id`,
+    ).run({ ...r, id, genres: JSON.stringify(r.genres), tracklist: JSON.stringify(r.tracklist) })
+    if (cover !== undefined) db.prepare('UPDATE releases SET has_cover = ? WHERE id = ?').run(cover ? 1 : 0, id)
+  })()
+}
+
+/** Deletes a manual record together with its copies and wishlist entry (only its creator can have any). */
+export function deleteManualRelease(id: number): void {
+  db.transaction(() => {
+    db.prepare('DELETE FROM copies WHERE release_id = ?').run(id)
+    db.prepare('DELETE FROM wishlist WHERE release_id = ?').run(id)
+    db.prepare('DELETE FROM releases WHERE id = ?').run(id)
+  })()
+  fs.rmSync(coverPath(id), { force: true })
+}

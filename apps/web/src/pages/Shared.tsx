@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { api, ApiError, IS_DEMO } from '../api'
 import Cover from '../Cover'
+import FilterBar from '../FilterBar'
+import SearchBar from '../SearchBar'
+import { filterOptions, matchesFilters, matchesQuery, SORTS, sortItems, type Filters, type SortKey } from '../search'
+import { useProgressive } from '../useProgressive'
 import { money } from '../Market'
 import { Logo } from '../Layout'
 import { ThemeToggle } from '../theme'
@@ -36,6 +40,23 @@ export default function Shared() {
   const [data, setData] = useState<SharedView | null>(null)
   const [gone, setGone] = useState(false)
   const [failed, setFailed] = useState(false)
+  const [params, setParams] = useSearchParams()
+  const query = params.get('q') ?? ''
+  const filters: Filters = { format: params.get('format') ?? '', decade: params.get('decade') ?? '', country: params.get('country') ?? '' }
+  const setParam = (name: string, value: string) =>
+    setParams((prev) => {
+      const next = new URLSearchParams(prev)
+      if (value) next.set(name, value)
+      else next.delete(name)
+      return next
+    }, { replace: true })
+  // Shared lists have no "added" date, and only the for-sale list has prices. They arrive sorted by artist.
+  const sorts = SORTS.filter((s) => s.key !== 'added' && (s.key !== 'price' || data?.kind === 'forsale'))
+  const sortParam = params.get('sort')
+  const sort: SortKey = sorts.some((s) => s.key === sortParam) ? (sortParam as SortKey) : 'artist'
+  const filtering = !!query || Object.values(filters).some(Boolean)
+  const shown = data ? sortItems(data.items.filter((i) => matchesQuery(i, query) && matchesFilters(i, filters)), sort) : null
+  const { visible, hasMore, sentinelRef } = useProgressive(shown, [token, query, sort, ...Object.values(filters)].join('|'))
 
   useEffect(() => {
     api<SharedView>(`/shared/${token}`)
@@ -82,11 +103,25 @@ export default function Shared() {
               </h1>
               <p className="text-sm text-ink-500">
                 {data.kind === 'group' && `A crate by ${data.owner} · `}
-                {data.items.length} {data.items.length === 1 ? 'record' : 'records'}
+                {filtering && shown ? `${shown.length} of ${data.items.length}` : data.items.length} {data.items.length === 1 ? 'record' : 'records'}
               </p>
             </div>
+            {data.items.length > 8 && (
+              <div className="space-y-3">
+                <SearchBar value={query} onChange={(q) => setParam('q', q)} placeholder="Search artist, title, label or catalog no.  ( / )" />
+                <FilterBar sort={sort} onSort={(s) => setParam('sort', s === 'artist' ? '' : s)} filters={filters} onFilter={setParam} options={filterOptions(data.items)} sorts={sorts} />
+              </div>
+            )}
+            {shown?.length === 0 && (
+              <p className="py-16 text-center text-sm text-ink-500">
+                No records match.{' '}
+                <button onClick={() => setParams({}, { replace: true })} className="text-wax hover:underline">
+                  Clear search and filters
+                </button>
+              </p>
+            )}
             <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-              {data.items.map((i) => (
+              {visible?.map((i) => (
                 <a
                   key={i.copyId ?? i.releaseId}
                   // Records added by hand (negative IDs) have no Discogs page
@@ -118,6 +153,7 @@ export default function Shared() {
                 </a>
               ))}
             </div>
+            {hasMore && <div ref={sentinelRef} className="h-10" />}
           </div>
         )}
       </main>
