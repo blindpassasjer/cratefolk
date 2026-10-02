@@ -5,6 +5,7 @@ import AddRecord from '../AddRecord'
 import { api, CURRENCIES, type WishItem } from '../api'
 import { useAuth } from '../auth'
 import Market from '../Market'
+import { CrateArt, FormatBadge } from '../Art'
 import SearchBar from '../SearchBar'
 import FilterBar from '../FilterBar'
 import { useProgressive } from '../useProgressive'
@@ -98,7 +99,7 @@ export default function Wishlist() {
 
       {items?.length === 0 && (
         <div className="flex flex-col items-center gap-3 py-24 text-center">
-          <Heart className="size-12 text-ink-700" />
+          <CrateArt />
           <h2 className="text-xl font-semibold">Nothing on your wishlist yet</h2>
           <p className="max-w-sm text-sm text-ink-500">Search Discogs and tap the heart on the exact pressing you want.</p>
         </div>
@@ -108,7 +109,7 @@ export default function Wishlist() {
         {visible?.map((w) => (
           <div key={w.wishId} className="group">
             <Link to={`/release/${w.releaseId}`} className="block">
-              <Cover releaseId={w.releaseId} hasCover={!!w.hasCover} className="rounded-md shadow-lg shadow-black/40 ring-1 ring-ink-800 transition group-hover:ring-wax/60" />
+              <Cover releaseId={w.releaseId} hasCover={!!w.hasCover} badge={<FormatBadge format={w.format} />} className="rounded-md shadow-lg shadow-black/40 ring-1 ring-ink-800 transition group-hover:ring-wax/60" />
               <div className="mt-2 truncate text-sm font-medium">{w.title}</div>
               <div className="truncate text-xs text-ink-500">{[w.artist, w.year].filter(Boolean).join(' · ')}</div>
               <div className="truncate text-xs text-ink-500">{[w.country, w.label, w.catno].filter(Boolean).join(' · ')}</div>

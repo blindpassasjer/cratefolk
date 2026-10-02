@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { IS_DEMO } from '../api'
 import { useAuth } from '../auth'
+import { RecordBackdrop } from '../Art'
 import { Logo } from '../Logo'
 import { useToast } from '../notify'
 import { ThemeToggle } from '../theme'
@@ -32,10 +33,11 @@ export default function Login() {
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
-      <div className="fixed right-3 top-3">
+      <RecordBackdrop />
+      <div className="fixed right-3 top-3 z-10">
         <ThemeToggle />
       </div>
-      <form onSubmit={submit} className="w-full max-w-sm space-y-5 rounded-xl border border-ink-800 bg-ink-900/60 p-8">
+      <form onSubmit={submit} className="relative w-full max-w-sm space-y-5 rounded-xl border border-ink-800 bg-ink-900 p-8">
         <div className="flex justify-center pb-2">
           <Logo />
         </div>

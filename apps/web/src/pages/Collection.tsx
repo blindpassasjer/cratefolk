@@ -1,4 +1,4 @@
-import { Disc3, Image, Pencil, Plus, Tag, Trash2 } from 'lucide-react'
+import { Image, Pencil, Plus, Tag, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import AddRecord from '../AddRecord'
@@ -7,6 +7,7 @@ import { money } from '../Market'
 import CollectionPicker from '../CollectionPicker'
 import Cover from '../Cover'
 import { useCrates } from '../crates'
+import { CrateArt, FormatBadge } from '../Art'
 import SearchBar from '../SearchBar'
 import FilterBar from '../FilterBar'
 import { useProgressive } from '../useProgressive'
@@ -158,7 +159,7 @@ export default function Collection() {
 
       {copies?.length === 0 && (
         <div className="flex flex-col items-center gap-3 py-24 text-center">
-          <Disc3 className="size-12 text-ink-700" />
+          <CrateArt />
           <h2 className="text-xl font-semibold">{active ? 'This crate is empty' : 'Your collection is empty'}</h2>
           <p className="max-w-sm text-sm text-ink-500">
             {active
@@ -174,7 +175,7 @@ export default function Collection() {
         {visible?.map((c) => (
           <div key={c.copyId} className="group relative">
             <Link to={`/release/${c.releaseId}`} className="block">
-              <Cover releaseId={c.releaseId} hasCover={!!c.hasCover} className="rounded-md shadow-lg shadow-black/40 ring-1 ring-ink-800 transition group-hover:-translate-y-0.5 group-hover:ring-wax/60" />
+              <Cover releaseId={c.releaseId} hasCover={!!c.hasCover} badge={<FormatBadge format={c.format} />} className="rounded-md shadow-lg shadow-black/40 ring-1 ring-ink-800 transition group-hover:-translate-y-0.5 group-hover:ring-wax/60" />
               <div className="mt-2 truncate text-sm font-medium">{c.title}</div>
               <div className="truncate text-xs text-ink-500">{[c.artist, c.year].filter(Boolean).join(' · ')}</div>
             </Link>

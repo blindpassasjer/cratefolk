@@ -1,11 +1,12 @@
-import { Disc3 } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { FallbackDisc } from './Art'
 import { IS_DEMO } from './api'
 import { demoCover, realCover } from './demo/cover'
 import { manualCover } from './demo/mockApi'
 
-export default function Cover({ releaseId, hasCover, className = '', src }: { releaseId: number; hasCover: boolean; className?: string; src?: string }) {
+export default function Cover({ releaseId, hasCover, className = '', src, badge }: { releaseId: number; hasCover: boolean; className?: string; src?: string; badge?: ReactNode }) {
   return (
-    <div className={`aspect-square overflow-hidden bg-ink-800 ${className}`}>
+    <div className={`relative aspect-square overflow-hidden bg-ink-800 ${className}`}>
       {hasCover ? (
         <img
           src={IS_DEMO ? (manualCover(releaseId) ?? realCover(releaseId) ?? demoCover(releaseId)) : (src ?? `/api/releases/${releaseId}/cover`)}
@@ -15,10 +16,9 @@ export default function Cover({ releaseId, hasCover, className = '', src }: { re
           className="size-full object-cover"
         />
       ) : (
-        <div className="flex size-full items-center justify-center">
-          <Disc3 className="size-1/3 text-ink-700" />
-        </div>
+        <FallbackDisc seed={releaseId} />
       )}
+      {badge && <div className="absolute bottom-2 left-2">{badge}</div>}
     </div>
   )
 }
