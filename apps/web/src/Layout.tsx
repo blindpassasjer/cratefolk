@@ -1,12 +1,13 @@
-import { Disc3, Heart, LogOut, Users } from 'lucide-react'
+import { Heart, LogOut, Users } from 'lucide-react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from './auth'
+import CoffeeMenu from './CoffeeMenu'
 import { ThemeToggle } from './theme'
 
 export function Logo() {
   return (
     <span className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-      <Disc3 className="size-6 text-wax" />
+      <img src="/favicon.svg" alt="" className="size-8" />
       WaxCrate
     </span>
   )
@@ -40,6 +41,7 @@ export default function Layout() {
             )}
           </nav>
           <span className="hidden text-sm text-ink-500 sm:block">{user?.name}</span>
+          <CoffeeMenu />
           <ThemeToggle />
           <button
             onClick={() => void logout()}

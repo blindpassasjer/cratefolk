@@ -1,3 +1,5 @@
+<p align="center"><img src="apps/web/public/favicon.svg" alt="" width="96"></p>
+
 # WaxCrate
 
 A self-hosted vinyl collection manager. Your database is the source of truth; Discogs is the metadata source.
@@ -29,3 +31,7 @@ npm run dev        # API on :6170, web on :5173 (proxies /api)
 ```
 
 Layout: `apps/server` (Hono + SQLite), `apps/web` (React + Vite + Tailwind).
+
+## Support
+
+WaxCrate is free and open source. If it's useful to you, you can [buy me a coffee](https://buymeacoffee.com/blindpassasjer) or [Vipps me](https://qr.vipps.no/box/d4cd2440-08dd-4eb9-b6b1-88130f984233/pay-in).
