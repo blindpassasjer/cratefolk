@@ -5,6 +5,7 @@ import AdminUsers from './pages/AdminUsers'
 import Collection from './pages/Collection'
 import Login from './pages/Login'
 import Release from './pages/Release'
+import Shared from './pages/Shared'
 import Wishlist from './pages/Wishlist'
 
 function RequireAuth({ admin = false }: { admin?: boolean }) {
@@ -19,6 +20,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/s/:token" element={<Shared />} />
       <Route element={<RequireAuth />}>
         <Route element={<Layout />}>
           <Route index element={<Collection />} />

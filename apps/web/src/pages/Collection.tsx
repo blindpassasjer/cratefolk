@@ -5,6 +5,7 @@ import AddRecord from '../AddRecord'
 import { api, type CollectionGroup, type Copy } from '../api'
 import CollectionPicker from '../CollectionPicker'
 import Cover from '../Cover'
+import ShareExport from '../ShareExport'
 
 export default function Collection() {
   const [params, setParams] = useSearchParams()
@@ -109,6 +110,12 @@ export default function Collection() {
               </button>
             </>
           )}
+          <ShareExport
+            key={activeId ?? 'all'}
+            kind={activeId ? 'group' : 'all'}
+            collectionId={activeId ?? undefined}
+            exportHref={`/api/export/collection.xlsx${activeId ? `?collection=${activeId}` : ''}`}
+          />
           <button onClick={() => setAdding(true)} className="flex items-center gap-2 rounded-md bg-wax px-4 py-2 text-sm font-medium text-on-wax hover:bg-wax-hover">
             <Plus className="size-4" /> Add record
           </button>

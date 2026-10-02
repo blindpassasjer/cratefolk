@@ -5,6 +5,7 @@ import AddRecord from '../AddRecord'
 import { api, CURRENCIES, type WishItem } from '../api'
 import { useAuth } from '../auth'
 import Market from '../Market'
+import ShareExport from '../ShareExport'
 import Cover from '../Cover'
 
 export default function Wishlist() {
@@ -55,6 +56,7 @@ export default function Wishlist() {
               ))}
             </select>
           </label>
+          <ShareExport kind="wishlist" exportHref="/api/export/wishlist.xlsx" />
           <button onClick={() => setAdding(true)} className="flex items-center gap-2 rounded-md bg-wax px-4 py-2 text-sm font-medium text-on-wax hover:bg-wax-hover">
             <Heart className="size-4" /> Find a record
           </button>
