@@ -1,6 +1,6 @@
 import { Check, Copy, FileSpreadsheet, Link2, Share2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { api } from './api'
+import { api, IS_DEMO } from './api'
 import { useDialog, useToast } from './notify'
 
 type Kind = 'all' | 'group' | 'wishlist' | 'forsale'
@@ -17,7 +17,7 @@ export default function ShareExport({ kind, collectionId, exportHref }: { kind: 
 
   const noun = kind === 'wishlist' ? 'wishlist' : kind === 'group' ? 'crate' : kind === 'forsale' ? 'for-sale list' : 'library'
   const target = { kind, ...(collectionId ? { collectionId } : {}) }
-  const url = token ? `${window.location.origin}/s/${token}` : ''
+  const url = token ? `${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, '')}/s/${token}` : ''
 
   useEffect(() => {
     if (!open) return
@@ -93,14 +93,16 @@ export default function ShareExport({ kind, collectionId, exportHref }: { kind: 
 
       {open && (
         <div className="absolute right-0 top-full z-20 mt-2 w-80 space-y-4 rounded-xl border border-ink-700 bg-ink-900 p-4 text-sm shadow-xl">
-          <section className="space-y-2">
-            <h3 className="font-medium">Export</h3>
-            <a href={exportHref} download className="flex items-center gap-2 rounded-md border border-ink-700 px-3 py-2 hover:border-wax">
-              <FileSpreadsheet className="size-4 text-wax" /> Download as Excel (.xlsx)
-            </a>
-          </section>
+          {!IS_DEMO && (
+            <section className="space-y-2">
+              <h3 className="font-medium">Export</h3>
+              <a href={exportHref} download className="flex items-center gap-2 rounded-md border border-ink-700 px-3 py-2 hover:border-wax">
+                <FileSpreadsheet className="size-4 text-wax" /> Download as Excel (.xlsx)
+              </a>
+            </section>
+          )}
 
-          <section className="space-y-2 border-t border-ink-800 pt-4">
+          <section className={`space-y-2 ${IS_DEMO ? '' : 'border-t border-ink-800 pt-4'}`}>
             <h3 className="flex items-center gap-1.5 font-medium">
               <Link2 className="size-4" /> Share link
             </h3>

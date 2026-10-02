@@ -1,13 +1,15 @@
 import { Heart, LogOut, UserRound, Users } from 'lucide-react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
+import { IS_DEMO } from './api'
 import { useAuth } from './auth'
+import { resetDemo } from './demo/mockApi'
 import CoffeeMenu from './CoffeeMenu'
 import { ThemeToggle } from './theme'
 
 export function Logo() {
   return (
     <span className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-      <img src="/favicon.svg" alt="" className="size-8" />
+      <img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" className="size-8" />
       WaxCrate
     </span>
   )
@@ -54,6 +56,20 @@ export default function Layout() {
           </button>
         </div>
       </header>
+      {IS_DEMO && (
+        <div className="border-b border-ink-800 bg-ink-900 px-4 py-2 text-center text-xs text-ink-300">
+          Demo with sample records. Everything stays in your browser.{' '}
+          <button
+            onClick={() => {
+              resetDemo()
+              window.location.reload()
+            }}
+            className="text-wax hover:underline"
+          >
+            Reset demo data
+          </button>
+        </div>
+      )}
       <main className="mx-auto max-w-7xl px-4 py-8">
         <Outlet />
       </main>

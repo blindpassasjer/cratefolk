@@ -1,3 +1,5 @@
+import { mockApi } from './demo/mockApi'
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -7,7 +9,7 @@ export class ApiError extends Error {
   }
 }
 
-export async function api<T>(path: string, init?: RequestInit & { json?: unknown }): Promise<T> {
+async function realApi<T>(path: string, init?: RequestInit & { json?: unknown }): Promise<T> {
   const { json, ...rest } = init ?? {}
   const res = await fetch(`/api${path}`, {
     ...rest,
@@ -20,6 +22,11 @@ export async function api<T>(path: string, init?: RequestInit & { json?: unknown
   if (!res.ok) throw new ApiError((data as { error?: string }).error ?? res.statusText, res.status)
   return data as T
 }
+
+/** True for the static GitHub Pages build, where the API is replaced by an in-browser mock. */
+export const IS_DEMO = import.meta.env.VITE_DEMO === 'true'
+
+export const api: typeof realApi = IS_DEMO ? mockApi : realApi
 
 export interface User {
   id: number

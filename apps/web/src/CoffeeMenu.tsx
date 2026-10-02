@@ -39,7 +39,7 @@ export default function CoffeeMenu() {
       {open && (
         <div role="dialog" aria-label="Buy me a coffee" className="absolute right-0 top-full z-30 mt-2 w-72 overflow-hidden rounded-xl border border-ink-700 bg-ink-900 shadow-xl">
           <div className="flex items-center gap-3 border-b border-ink-800 p-4">
-            <img src="/developer.jpg" alt="" aria-hidden="true" className="size-10 rounded-full border-2 border-ink-700 object-cover" />
+            <img src={`${import.meta.env.BASE_URL}developer.jpg`} alt="" aria-hidden="true" className="size-10 rounded-full border-2 border-ink-700 object-cover" />
             <div>
               <h2 className="text-sm font-semibold">Buy me a coffee</h2>
               <p className="text-xs text-ink-500">Support keeps WaxCrate running</p>

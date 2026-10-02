@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
+import { IS_DEMO } from '../api'
 import { useAuth } from '../auth'
 import { Logo } from '../Layout'
 import { useToast } from '../notify'
@@ -7,8 +8,8 @@ import { ThemeToggle } from '../theme'
 
 export default function Login() {
   const { user, loading, login } = useAuth()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [email, setEmail] = useState(IS_DEMO ? 'demo@waxcrate.app' : '')
+  const [password, setPassword] = useState(IS_DEMO ? 'demo' : '')
   const toast = useToast()
   const [busy, setBusy] = useState(false)
 
@@ -52,7 +53,9 @@ export default function Login() {
         >
           {busy ? 'Signing in…' : 'Sign in'}
         </button>
-        <p className="text-center text-xs text-ink-500">Accounts are created by your admin.</p>
+        <p className="text-center text-xs text-ink-500">
+          {IS_DEMO ? 'This is a demo: any email and password works.' : 'Accounts are created by your admin.'}
+        </p>
       </form>
     </div>
   )

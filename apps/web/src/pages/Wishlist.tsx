@@ -1,11 +1,10 @@
-import { Check, Heart, X } from 'lucide-react'
+import { Heart } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import AddRecord from '../AddRecord'
 import { api, CURRENCIES, type WishItem } from '../api'
 import { useAuth } from '../auth'
 import Market from '../Market'
-import { useToast } from '../notify'
 import SearchBar from '../SearchBar'
 import { matchesQuery } from '../search'
 import ShareExport from '../ShareExport'
@@ -16,7 +15,6 @@ export default function Wishlist() {
   const [items, setItems] = useState<WishItem[] | null>(null)
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const toast = useToast()
   const [params, setParams] = useSearchParams()
   const query = params.get('q') ?? ''
   const setQuery = (q: string) => setParams(q ? { q } : {}, { replace: true })
@@ -33,16 +31,6 @@ export default function Wishlist() {
   useEffect(() => {
     void load()
   }, [load])
-
-  async function act(fn: () => Promise<unknown>, success: string) {
-    try {
-      await fn()
-      await load()
-      toast.success(success)
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Something went wrong')
-    }
-  }
 
   return (
     <div className="space-y-6">
@@ -106,21 +94,6 @@ export default function Wishlist() {
             </Link>
             <div className="mt-2">
               <Market releaseId={w.releaseId} currency={user?.currency ?? 'USD'} search={`${w.artist} ${w.title}`} />
-            </div>
-            <div className="mt-3 flex gap-2">
-              <button
-                onClick={() => void act(() => api(`/wishlist/${w.wishId}/acquire`, { method: 'POST', json: {} }), `Moved “${w.title}” to your collection`)}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-ink-700 px-2 py-1.5 text-xs hover:border-wax"
-              >
-                <Check className="size-3.5 text-wax" /> Got it
-              </button>
-              <button
-                onClick={() => void act(() => api(`/wishlist/${w.wishId}`, { method: 'DELETE' }), `Removed “${w.title}” from your wishlist`)}
-                aria-label="Remove from wishlist"
-                className="rounded-md border border-ink-700 px-2 py-1.5 text-ink-500 hover:border-danger hover:text-danger"
-              >
-                <X className="size-3.5" />
-              </button>
             </div>
           </div>
         ))}

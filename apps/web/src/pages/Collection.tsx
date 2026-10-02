@@ -9,7 +9,8 @@ import Cover from '../Cover'
 import ManageCollections from '../ManageCollections'
 import { useToast } from '../notify'
 import SearchBar from '../SearchBar'
-import { matchesQuery } from '../search'
+import FilterBar from '../FilterBar'
+import { filterOptions, matchesFilters, matchesQuery, SORTS, sortItems, type Filters, type SortKey } from '../search'
 import ShareExport from '../ShareExport'
 
 export default function Collection() {
@@ -17,6 +18,9 @@ export default function Collection() {
   const activeId = Number(params.get('c')) || null
   const sale = params.get('sale') === '1'
   const query = params.get('q') ?? ''
+  const sortParam = params.get('sort')
+  const sort: SortKey = SORTS.some((s) => s.key === sortParam) ? (sortParam as SortKey) : 'added'
+  const filters: Filters = { format: params.get('format') ?? '', decade: params.get('decade') ?? '', country: params.get('country') ?? '' }
 
   const [copies, setCopies] = useState<Copy[] | null>(null)
   const [groups, setGroups] = useState<CollectionGroup[]>([])
@@ -50,24 +54,37 @@ export default function Collection() {
     void load()
   }, [load])
 
-  // The "All records" count needs the unfiltered total even while a crate is open.
+  // The "All records" and "For sale" counts need the unfiltered totals even while a filter is open.
   useEffect(() => {
-    if (activeId) void api<{ copies: Copy[] }>('/collection').then((r) => setTotalCount(r.copies.length))
-  }, [activeId, copies])
+    void api<{ copies: Copy[] }>('/collection').then((r) => {
+      setTotalCount(r.copies.length)
+      setSaleCount(r.copies.filter((c) => c.forSale).length)
+    })
+  }, [activeId, sale, copies])
 
-  // The search text survives switching between collections.
-  const withQuery = (p: Record<string, string>) => setParams(query ? { ...p, q: query } : p)
+  // Search text, sort and filters survive switching between collections.
+  const withQuery = (p: Record<string, string>) => {
+    const keep: Record<string, string> = { ...p }
+    for (const k of ['q', 'sort', 'format', 'decade', 'country']) {
+      const v = params.get(k)
+      if (v) keep[k] = v
+    }
+    setParams(keep)
+  }
   const select = (id: number | null) => withQuery(id ? { c: String(id) } : {})
   const selectSale = () => withQuery({ sale: '1' })
-  const setQuery = (q: string) =>
+  const setParam = (name: string, value: string) =>
     setParams((prev) => {
       const next = new URLSearchParams(prev)
-      if (q) next.set('q', q)
-      else next.delete('q')
+      if (value) next.set(name, value)
+      else next.delete(name)
       return next
     }, { replace: true })
+  const setQuery = (q: string) => setParam('q', q)
 
-  const shown = copies?.filter((c) => matchesQuery(c, query)) ?? null
+  const filtering = !!query || Object.values(filters).some(Boolean)
+  const shown = copies ? sortItems(copies.filter((c) => matchesQuery(c, query) && matchesFilters(c, filters)), sort) : null
+  const options = filterOptions(copies ?? [])
 
   async function run(fn: () => Promise<unknown>) {
     try {
@@ -102,7 +119,7 @@ export default function Collection() {
           <h1 className="text-2xl font-semibold tracking-tight">{active ? active.name : sale ? 'For sale' : 'Collection'}</h1>
           {copies && shown && (
             <p className="text-sm text-ink-500">
-              {query ? `${shown.length} of ${copies.length}` : copies.length} {copies.length === 1 ? 'record' : 'records'}
+              {filtering ? `${shown.length} of ${copies.length}` : copies.length} {copies.length === 1 ? 'record' : 'records'}
             </p>
           )}
         </div>
@@ -169,13 +186,24 @@ export default function Collection() {
         )}
       </div>
 
-      {(copies?.length ?? 0) > 0 && <SearchBar value={query} onChange={setQuery} placeholder="Search artist, title, label, catalog no. or barcode  ( / )" />}
+      {(copies?.length ?? 0) > 0 && (
+        <div className="space-y-3">
+          <SearchBar value={query} onChange={setQuery} placeholder="Search artist, title, label, catalog no. or barcode  ( / )" />
+          <FilterBar sort={sort} onSort={(s) => setParam('sort', s === 'added' ? '' : s)} filters={filters} onFilter={setParam} options={options} />
+        </div>
+      )}
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
       {copies && copies.length > 0 && shown?.length === 0 && (
         <p className="py-16 text-center text-sm text-ink-500">
-          No records match “{query}”. <button onClick={() => setQuery('')} className="text-wax hover:underline">Clear search</button>
+          No records match{query && <> “{query}”</>}.{' '}
+          <button
+            onClick={() => setParams((prev) => { const next = new URLSearchParams(prev); ['q', 'format', 'decade', 'country'].forEach((k) => next.delete(k)); return next }, { replace: true })}
+            className="text-wax hover:underline"
+          >
+            Clear search and filters
+          </button>
         </p>
       )}
 
@@ -202,7 +230,7 @@ export default function Collection() {
               <div className="truncate text-xs text-ink-500">{[c.artist, c.year].filter(Boolean).join(' · ')}</div>
             </Link>
             {!!c.forSale && (
-              <span className="absolute bottom-[3.1rem] left-2 flex items-center gap-1 rounded-md bg-black/70 px-1.5 py-0.5 text-xs text-white">
+              <span className="absolute left-2 top-2 flex items-center gap-1 rounded-md bg-black/70 px-1.5 py-0.5 text-xs text-white">
                 <Tag className="size-3" />
                 {c.askingPrice != null && c.priceCurrency ? money(c.askingPrice, c.priceCurrency) : 'For sale'}
               </span>
