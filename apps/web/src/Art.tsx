@@ -33,7 +33,7 @@ export function FallbackDisc({ seed }: { seed: number }) {
 }
 
 /** The medium a Discogs-style format string describes ("CD, Album" → "CD"), or null for vinyl and anything unrecognised. */
-export function mediumLabel(format: string): string | null {
+function mediumLabel(format: string): string | null {
   const f = format.toLowerCase()
   if (/\bvinyl\b|\blp\b|\b\d+"/.test(f)) return null
   if (/\bcd\b|\bcdr\b|\bsacd\b/.test(f)) return 'CD'

@@ -41,6 +41,7 @@ export default function Wishlist() {
   const load = useCallback(async () => {
     try {
       setItems((await api<{ items: WishItem[] }>('/wishlist')).items)
+      setError(null)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load your wishlist')
     }

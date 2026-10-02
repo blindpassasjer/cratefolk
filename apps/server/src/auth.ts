@@ -14,7 +14,7 @@ const scrypt = promisify(crypto.scrypt) as (
 const COOKIE = 'waxcrate_session'
 const SESSION_DAYS = 30
 
-export interface SessionUser {
+interface SessionUser {
   id: number
   email: string
   name: string
@@ -109,6 +109,8 @@ export async function ensureAdmin(): Promise<void> {
       "INSERT INTO users (email, name, password_hash, role) VALUES (?, 'Admin', ?, 'admin')",
     ).run(config.adminEmail, hash)
   }
+  // If ADMIN_EMAIL was changed, the previous admin must not keep its role (and old password).
+  db.prepare("UPDATE users SET role = 'user' WHERE role = 'admin' AND email != ?").run(config.adminEmail)
 }
 
 export function purgeExpiredSessions(): void {

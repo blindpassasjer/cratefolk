@@ -56,6 +56,7 @@ export default function Collection() {
       const [{ copies }] = await Promise.all([api<{ copies: Copy[] }>(`/collection${qs}`), refresh()])
       if (mine !== latest.current) return // a newer load started meanwhile; don't overwrite it with older data
       setCopies(copies)
+      setError(null)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load your collection')
     }

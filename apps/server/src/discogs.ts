@@ -77,7 +77,7 @@ async function getJson<T>(path: string, params: Record<string, string> = {}, pri
 /** Discogs disambiguates duplicate names with a numeric suffix, e.g. "Nirvana (2)". */
 const cleanName = (name: string) => name.replace(/\s\(\d+\)$/, '').trim()
 
-export interface SearchResult {
+interface SearchResult {
   id: number
   masterId: number | null
   artist: string
@@ -192,7 +192,7 @@ export interface ParsedRelease {
   coverUrl: string | null
 }
 
-export function parseRelease(raw: RawRelease): ParsedRelease {
+function parseRelease(raw: RawRelease): ParsedRelease {
   const artists = raw.artists ?? []
   const artist = artists
     .map((a, i) => {
