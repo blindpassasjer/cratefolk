@@ -68,6 +68,47 @@ const migrations: string[] = [
     UNIQUE (user_id, release_id)
   );
   `,
+  `
+  ALTER TABLE users ADD COLUMN currency TEXT NOT NULL DEFAULT 'USD';
+
+  CREATE TABLE market_stats (
+    release_id   INTEGER NOT NULL,
+    currency     TEXT NOT NULL,
+    num_for_sale INTEGER NOT NULL,
+    lowest_price REAL,
+    fetched_at   INTEGER NOT NULL,
+    PRIMARY KEY (release_id, currency)
+  );
+  `,
+  `
+  -- User-made groupings of owned copies ("Jazz", "For sale", ...). A copy can be in several.
+  CREATE TABLE collections (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name       TEXT NOT NULL COLLATE NOCASE,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (user_id, name)
+  );
+
+  CREATE TABLE collection_copies (
+    collection_id INTEGER NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+    copy_id       INTEGER NOT NULL REFERENCES copies(id) ON DELETE CASCADE,
+    added_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (collection_id, copy_id)
+  );
+  CREATE INDEX collection_copies_copy_id ON collection_copies(copy_id);
+  `,
+  `
+  -- Public read-only links. kind: 'all' (every owned record), 'group' (one collection), 'wishlist'.
+  CREATE TABLE shares (
+    token      TEXT PRIMARY KEY,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    kind       TEXT NOT NULL CHECK (kind IN ('all', 'group', 'wishlist')),
+    group_id   INTEGER REFERENCES collections(id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE UNIQUE INDEX shares_target ON shares(user_id, kind, COALESCE(group_id, 0));
+  `,
 ]
 
 fs.mkdirSync(config.dataDir, { recursive: true })

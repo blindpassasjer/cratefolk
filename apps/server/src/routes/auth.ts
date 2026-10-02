@@ -8,6 +8,7 @@ import {
   type AppEnv,
 } from '../auth.js'
 import { db } from '../db.js'
+import { CURRENCIES } from '../discogs.js'
 
 export const authRoutes = new Hono<AppEnv>()
 
@@ -51,3 +52,10 @@ authRoutes.post('/logout', (c) => {
 })
 
 authRoutes.get('/me', requireUser, (c) => c.json({ user: c.get('user') }))
+
+authRoutes.patch('/me', requireUser, async (c) => {
+  const parsed = z.object({ currency: z.enum(CURRENCIES) }).safeParse(await c.req.json().catch(() => null))
+  if (!parsed.success) return c.json({ error: 'Unsupported currency' }, 400)
+  db.prepare('UPDATE users SET currency = ? WHERE id = ?').run(parsed.data.currency, c.get('user').id)
+  return c.json({ ok: true })
+})

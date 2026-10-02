@@ -24,6 +24,7 @@ export interface User {
   email: string
   name: string
   role: 'admin' | 'user'
+  currency: string
 }
 
 export interface AdminUser extends User {
@@ -49,6 +50,7 @@ export interface Copy {
   sleeveCondition: Grade | null
   notes: string | null
   addedAt: string
+  collectionIds: number[]
 }
 
 export interface SearchResult {
@@ -89,11 +91,19 @@ export interface ReleaseDetail {
   hasCover: number
 }
 
-export type OwnedCopy = Pick<Copy, 'copyId' | 'mediaCondition' | 'sleeveCondition' | 'notes' | 'addedAt'>
+export type OwnedCopy = Pick<Copy, 'copyId' | 'mediaCondition' | 'sleeveCondition' | 'notes' | 'addedAt' | 'collectionIds'>
 
-export type WishItem = Omit<Copy, 'copyId' | 'mediaCondition' | 'sleeveCondition'> & { wishId: number }
+export type WishItem = Omit<Copy, 'copyId' | 'mediaCondition' | 'sleeveCondition' | 'collectionIds'> & { wishId: number }
 
 export interface Status {
   owned: Record<number, number>
   wishlisted: number[]
+}
+
+export const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'MXN', 'BRL', 'NZD', 'SEK', 'DKK', 'ZAR']
+
+export interface CollectionGroup {
+  id: number
+  name: string
+  count: number
 }

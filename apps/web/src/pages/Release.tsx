@@ -1,19 +1,26 @@
 import { ArrowLeft, Heart, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { api, GRADES, type Grade, type OwnedCopy, type ReleaseDetail } from '../api'
+import { useAuth } from '../auth'
+import Market from '../Market'
+import { api, GRADES, type CollectionGroup, type Grade, type OwnedCopy, type ReleaseDetail } from '../api'
+import CollectionPicker from '../CollectionPicker'
 import Cover from '../Cover'
 
 const select = 'rounded-md border border-ink-700 bg-ink-900 px-2 py-1 text-sm outline-none focus:border-wax'
 
 export default function Release() {
   const { id } = useParams()
+  const { user } = useAuth()
   const [data, setData] = useState<{ release: ReleaseDetail; copies: OwnedCopy[]; wishlisted: { id: number } | null } | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [groups, setGroups] = useState<CollectionGroup[]>([])
 
   const load = useCallback(async () => {
     try {
-      setData(await api(`/releases/${id}`))
+      const [detail, g] = await Promise.all([api<never>(`/releases/${id}`), api<{ collections: CollectionGroup[] }>('/collections')])
+      setData(detail)
+      setGroups(g.collections)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load release')
     }
@@ -45,7 +52,7 @@ export default function Release() {
     await load()
   }
 
-  if (error) return <p className="text-sm text-red-400">{error}</p>
+  if (error) return <p className="text-sm text-danger">{error}</p>
   if (!data) return null
   const { release: r, copies, wishlisted } = data
 
@@ -81,8 +88,13 @@ export default function Release() {
             ))}
           </dl>
 
+          <section className="space-y-1.5">
+            <h2 className="text-sm font-medium text-ink-300">On Discogs marketplace</h2>
+            <Market releaseId={r.id} currency={user?.currency ?? 'USD'} />
+          </section>
+
           <div className="flex flex-wrap gap-2">
-            <button onClick={() => void addCopy()} className="flex items-center gap-2 rounded-md bg-wax px-4 py-2 text-sm font-medium text-ink-950 hover:bg-wax-hover">
+            <button onClick={() => void addCopy()} className="flex items-center gap-2 rounded-md bg-wax px-4 py-2 text-sm font-medium text-on-wax hover:bg-wax-hover">
               <Plus className="size-4" /> {copies.length ? 'Add another copy' : 'Add to collection'}
             </button>
             {copies.length === 0 && (
@@ -115,7 +127,8 @@ export default function Release() {
                   </label>
                 ))}
                 <span className="flex-1 text-xs text-ink-500">Added {c.addedAt.slice(0, 10)}</span>
-                <button onClick={() => void remove(c.copyId)} className="text-ink-500 hover:text-red-400" aria-label="Remove copy">
+                <CollectionPicker variant="inline" copyId={c.copyId} selected={c.collectionIds} groups={groups} onChanged={() => void load()} />
+                <button onClick={() => void remove(c.copyId)} className="text-ink-500 hover:text-danger" aria-label="Remove copy">
                   <Trash2 className="size-4" />
                 </button>
               </div>

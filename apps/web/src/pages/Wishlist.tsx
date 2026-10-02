@@ -2,10 +2,13 @@ import { Check, Heart, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import AddRecord from '../AddRecord'
-import { api, type WishItem } from '../api'
+import { api, CURRENCIES, type WishItem } from '../api'
+import { useAuth } from '../auth'
+import Market from '../Market'
 import Cover from '../Cover'
 
 export default function Wishlist() {
+  const { user, setCurrency } = useAuth()
   const [items, setItems] = useState<WishItem[] | null>(null)
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -39,12 +42,26 @@ export default function Wishlist() {
           <h1 className="text-2xl font-semibold tracking-tight">Wishlist</h1>
           {items && <p className="text-sm text-ink-500">{items.length} {items.length === 1 ? 'record' : 'records'} you're after</p>}
         </div>
-        <button onClick={() => setAdding(true)} className="flex items-center gap-2 rounded-md bg-wax px-4 py-2 text-sm font-medium text-ink-950 hover:bg-wax-hover">
-          <Heart className="size-4" /> Find a record
-        </button>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 text-xs text-ink-500">
+            Prices in
+            <select
+              value={user?.currency ?? 'USD'}
+              onChange={(e) => void setCurrency(e.target.value)}
+              className="rounded-md border border-ink-700 bg-ink-900 px-2 py-1.5 text-sm text-ink-100 outline-none focus:border-wax"
+            >
+              {CURRENCIES.map((c) => (
+                <option key={c}>{c}</option>
+              ))}
+            </select>
+          </label>
+          <button onClick={() => setAdding(true)} className="flex items-center gap-2 rounded-md bg-wax px-4 py-2 text-sm font-medium text-on-wax hover:bg-wax-hover">
+            <Heart className="size-4" /> Find a record
+          </button>
+        </div>
       </div>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
 
       {items?.length === 0 && (
         <div className="flex flex-col items-center gap-3 py-24 text-center">
@@ -63,7 +80,10 @@ export default function Wishlist() {
               <div className="truncate text-xs text-ink-500">{[w.artist, w.year].filter(Boolean).join(' · ')}</div>
               <div className="truncate text-xs text-ink-500">{[w.country, w.label, w.catno].filter(Boolean).join(' · ')}</div>
             </Link>
-            <div className="mt-2 flex gap-2">
+            <div className="mt-2">
+              <Market releaseId={w.releaseId} currency={user?.currency ?? 'USD'} />
+            </div>
+            <div className="mt-3 flex gap-2">
               <button
                 onClick={() => void act(() => api(`/wishlist/${w.wishId}/acquire`, { method: 'POST', json: {} }))}
                 className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-ink-700 px-2 py-1.5 text-xs hover:border-wax"
@@ -73,7 +93,7 @@ export default function Wishlist() {
               <button
                 onClick={() => void act(() => api(`/wishlist/${w.wishId}`, { method: 'DELETE' }))}
                 aria-label="Remove from wishlist"
-                className="rounded-md border border-ink-700 px-2 py-1.5 text-ink-500 hover:border-red-400 hover:text-red-400"
+                className="rounded-md border border-ink-700 px-2 py-1.5 text-ink-500 hover:border-danger hover:text-danger"
               >
                 <X className="size-3.5" />
               </button>

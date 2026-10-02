@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { requireUser, type AppEnv } from '../auth.js'
 import { db } from '../db.js'
-import { DiscogsError } from '../discogs.js'
+import { DiscogsError, fetchMarketStats, type Currency } from '../discogs.js'
 import { ensureRelease } from '../releases.js'
 
 export const wishlistRoutes = new Hono<AppEnv>()
@@ -112,4 +112,36 @@ statusRoutes.get('/', (c) => {
     owned: Object.fromEntries(owned.map((o) => [o.id, o.n])),
     wishlisted: wished.map((w) => w.id),
   })
+})
+
+// Market stats are cached per release and currency; refetched once they are older than the TTL.
+const MARKET_TTL_MS = 6 * 3_600_000
+
+export const marketRoutes = new Hono<AppEnv>()
+marketRoutes.use('*', requireUser)
+
+marketRoutes.get('/:releaseId', async (c) => {
+  const releaseId = Number(c.req.param('releaseId'))
+  if (!Number.isInteger(releaseId) || releaseId <= 0) return c.json({ error: 'Invalid release' }, 400)
+  const currency = c.get('user').currency as Currency
+  const url = `https://www.discogs.com/sell/release/${releaseId}`
+
+  const row = db
+    .prepare('SELECT num_for_sale AS numForSale, lowest_price AS lowestPrice, fetched_at AS fetchedAt FROM market_stats WHERE release_id = ? AND currency = ?')
+    .get(releaseId, currency) as { numForSale: number; lowestPrice: number | null; fetchedAt: number } | undefined
+  if (row && Date.now() - row.fetchedAt < MARKET_TTL_MS) return c.json({ ...row, currency, url })
+
+  try {
+    const stats = await fetchMarketStats(releaseId, currency)
+    const fetchedAt = Date.now()
+    db.prepare(
+      'INSERT OR REPLACE INTO market_stats (release_id, currency, num_for_sale, lowest_price, fetched_at) VALUES (?, ?, ?, ?, ?)',
+    ).run(releaseId, currency, stats.numForSale, stats.lowestPrice, fetchedAt)
+    return c.json({ ...stats, fetchedAt, currency, url })
+  } catch (err) {
+    // Serve stale numbers rather than nothing if Discogs is unreachable.
+    if (row) return c.json({ ...row, currency, url, stale: true })
+    if (err instanceof DiscogsError) return c.json({ error: err.message }, 502)
+    throw err
+  }
 })

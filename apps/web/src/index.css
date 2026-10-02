@@ -10,7 +10,31 @@
   --color-ink-100: #ececf1;
   --color-wax: #f59e0b;
   --color-wax-hover: #fbbf24;
+  --color-on-wax: #0b0b0d;
+  --color-danger: #f87171;
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+/* Light theme: the ink scale is inverted so every bg-ink-*/text-ink-* utility flips with it. */
+:root[data-theme='light'] {
+  --color-ink-950: #faf8f5;
+  --color-ink-900: #f2efea;
+  --color-ink-800: #e8e4de;
+  --color-ink-700: #d3cec6;
+  --color-ink-500: #766f64;
+  --color-ink-300: #4f4a43;
+  --color-ink-100: #1a1815;
+  --color-wax: #b45309;
+  --color-wax-hover: #92400e;
+  --color-on-wax: #ffffff;
+  --color-danger: #dc2626;
+}
+
+html {
+  color-scheme: dark;
+}
+html[data-theme='light'] {
+  color-scheme: light;
 }
 
 html,

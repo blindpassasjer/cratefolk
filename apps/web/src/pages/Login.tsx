@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { Logo } from '../Layout'
+import { ThemeToggle } from '../theme'
 
 export default function Login() {
   const { user, loading, login } = useAuth()
@@ -30,6 +31,9 @@ export default function Login() {
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
+      <div className="fixed right-3 top-3">
+        <ThemeToggle />
+      </div>
       <form onSubmit={submit} className="w-full max-w-sm space-y-5 rounded-xl border border-ink-800 bg-ink-900/60 p-8">
         <div className="flex justify-center pb-2">
           <Logo />
@@ -42,10 +46,10 @@ export default function Login() {
           Password
           <input className={input} type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         </label>
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {error && <p className="text-sm text-danger">{error}</p>}
         <button
           disabled={busy}
-          className="w-full rounded-md bg-wax px-3 py-2 text-sm font-medium text-ink-950 transition-colors hover:bg-wax-hover disabled:opacity-60"
+          className="w-full rounded-md bg-wax px-3 py-2 text-sm font-medium text-on-wax transition-colors hover:bg-wax-hover disabled:opacity-60"
         >
           {busy ? 'Signing in…' : 'Sign in'}
         </button>

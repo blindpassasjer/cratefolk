@@ -17,16 +17,28 @@ const condition = z.enum(['M', 'NM', 'VG+', 'VG', 'G+', 'G', 'F', 'P']).nullable
 const COPY_SELECT = `
   SELECT c.id AS copyId, c.release_id AS releaseId, c.media_condition AS mediaCondition,
          c.sleeve_condition AS sleeveCondition, c.notes, c.added_at AS addedAt,
-         r.title, r.artist, r.year, r.country, r.label, r.catno, r.format, r.has_cover AS hasCover
+         r.title, r.artist, r.year, r.country, r.label, r.catno, r.format, r.has_cover AS hasCover,
+         (SELECT group_concat(collection_id) FROM collection_copies WHERE copy_id = c.id) AS collectionIds
   FROM copies c JOIN releases r ON r.id = c.release_id`
 
-collectionRoutes.get('/', (c) =>
-  c.json({
-    copies: db
-      .prepare(`${COPY_SELECT} WHERE c.user_id = ? ORDER BY c.added_at DESC, c.id DESC`)
-      .all(c.get('user').id),
-  }),
-)
+type CopyRow = { collectionIds: string | null } & Record<string, unknown>
+const withIds = (row: unknown) => {
+  if (!row) return row
+  const r = row as CopyRow
+  return { ...r, collectionIds: r.collectionIds ? r.collectionIds.split(',').map(Number) : [] }
+}
+
+collectionRoutes.get('/', (c) => {
+  const groupId = Number(c.req.query('collection')) || null
+  const rows = db
+    .prepare(
+      `${COPY_SELECT} WHERE c.user_id = ?
+       ${groupId ? 'AND c.id IN (SELECT copy_id FROM collection_copies WHERE collection_id = ?)' : ''}
+       ORDER BY c.added_at DESC, c.id DESC`,
+    )
+    .all(...(groupId ? [c.get('user').id, groupId] : [c.get('user').id]))
+  return c.json({ copies: rows.map(withIds) })
+})
 
 const addSchema = z.object({
   releaseId: z.number().int().positive(),
@@ -55,7 +67,7 @@ collectionRoutes.post('/', async (c) => {
       )
       .run(userId, releaseId, mediaCondition ?? null, sleeveCondition ?? null, notes ?? null)
   })()
-  const copy = db.prepare(`${COPY_SELECT} WHERE c.id = ?`).get(info.lastInsertRowid)
+  const copy = withIds(db.prepare(`${COPY_SELECT} WHERE c.id = ?`).get(info.lastInsertRowid))
   return c.json({ copy }, 201)
 })
 
@@ -74,7 +86,7 @@ collectionRoutes.patch('/:id', async (c) => {
   if (mediaCondition !== undefined) db.prepare('UPDATE copies SET media_condition = ? WHERE id = ?').run(mediaCondition, id)
   if (sleeveCondition !== undefined) db.prepare('UPDATE copies SET sleeve_condition = ? WHERE id = ?').run(sleeveCondition, id)
   if (notes !== undefined) db.prepare('UPDATE copies SET notes = ? WHERE id = ?').run(notes, id)
-  return c.json({ copy: db.prepare(`${COPY_SELECT} WHERE c.id = ?`).get(id) })
+  return c.json({ copy: withIds(db.prepare(`${COPY_SELECT} WHERE c.id = ?`).get(id)) })
 })
 
 collectionRoutes.delete('/:id', (c) => {
@@ -107,10 +119,12 @@ releaseRoutes.get('/:id', (c) => {
   const copies = db
     .prepare(
       `SELECT id AS copyId, media_condition AS mediaCondition, sleeve_condition AS sleeveCondition,
-              notes, added_at AS addedAt
+              notes, added_at AS addedAt,
+              (SELECT group_concat(collection_id) FROM collection_copies WHERE copy_id = copies.id) AS collectionIds
        FROM copies WHERE release_id = ? AND user_id = ? ORDER BY id`,
     )
     .all(id, c.get('user').id)
+    .map(withIds)
   const wishlisted = db
     .prepare('SELECT id, notes FROM wishlist WHERE release_id = ? AND user_id = ?')
     .get(id, c.get('user').id)

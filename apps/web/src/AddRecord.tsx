@@ -109,7 +109,7 @@ export default function AddRecord({
               placeholder={current.placeholder}
               className="min-w-0 flex-1 rounded-md border border-ink-700 bg-ink-950 px-3 py-2 text-sm outline-none focus:border-wax"
             />
-            <button className="flex items-center gap-2 rounded-md bg-wax px-4 py-2 text-sm font-medium text-ink-950 hover:bg-wax-hover">
+            <button className="flex items-center gap-2 rounded-md bg-wax px-4 py-2 text-sm font-medium text-on-wax hover:bg-wax-hover">
               <Search className="size-4" /> Search
             </button>
           </div>
@@ -120,7 +120,7 @@ export default function AddRecord({
         </form>
 
         <div className="p-2">
-          {error && <p className="px-2 py-3 text-sm text-red-400">{error}</p>}
+          {error && <p className="px-2 py-3 text-sm text-danger">{error}</p>}
           {loading && (
             <div className="flex justify-center py-10 text-ink-500">
               <Loader2 className="size-5 animate-spin" />

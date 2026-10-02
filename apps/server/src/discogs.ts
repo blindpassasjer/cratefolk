@@ -14,19 +14,32 @@ export class DiscogsError extends Error {
 
 // Discogs allows 60 requests/min with a token and 25 without. Requests run one at a time,
 // spaced out so we stay under that, and 429s are retried after the server's Retry-After.
+// Interactive requests (priority 1) jump ahead of background ones (priority 0).
 const MIN_GAP_MS = config.discogsToken ? 1100 : 2500
-let chain: Promise<unknown> = Promise.resolve()
+const queue: Array<{ priority: number; run: () => Promise<void> }> = []
+let pumping = false
 let lastStart = 0
 
-function schedule<T>(task: () => Promise<T>): Promise<T> {
-  const run = chain.then(async () => {
+async function pump(): Promise<void> {
+  if (pumping) return
+  pumping = true
+  while (queue.length) {
+    let next = 0
+    for (let i = 1; i < queue.length; i++) if (queue[i]!.priority > queue[next]!.priority) next = i
+    const job = queue.splice(next, 1)[0]!
     const wait = lastStart + MIN_GAP_MS - Date.now()
     if (wait > 0) await new Promise((r) => setTimeout(r, wait))
     lastStart = Date.now()
-    return task()
+    await job.run()
+  }
+  pumping = false
+}
+
+function schedule<T>(task: () => Promise<T>, priority: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    queue.push({ priority, run: () => task().then(resolve, reject) })
+    void pump()
   })
-  chain = run.catch(() => undefined)
-  return run
 }
 
 const headers = (): Record<string, string> => ({
@@ -34,17 +47,18 @@ const headers = (): Record<string, string> => ({
   ...(config.discogsToken ? { Authorization: `Discogs token=${config.discogsToken}` } : {}),
 })
 
-async function getJson<T>(path: string, params: Record<string, string> = {}): Promise<T> {
+async function getJson<T>(path: string, params: Record<string, string> = {}, priority = 1): Promise<T> {
   const url = new URL(BASE + path)
   for (const [k, v] of Object.entries(params)) if (v) url.searchParams.set(k, v)
 
   for (let attempt = 0; ; attempt++) {
-    const res = await schedule(() => fetch(url, { headers: headers() }))
+    const res = await schedule(() => fetch(url, { headers: headers() }), priority)
     if (res.status === 429 && attempt < 3) {
       const retryAfter = Number(res.headers.get('retry-after')) || 5
       await new Promise((r) => setTimeout(r, retryAfter * 1000))
       continue
     }
+    if (res.status === 400) throw new DiscogsError('Discogs rejected the request', 400)
     if (res.status === 404) throw new DiscogsError('Not found on Discogs', 404)
     if (res.status === 401) throw new DiscogsError('Discogs rejected the token', 502)
     if (!res.ok) throw new DiscogsError(`Discogs returned ${res.status}`, 502)
@@ -229,4 +243,23 @@ export async function downloadImage(url: string): Promise<Buffer | null> {
   } catch {
     return null
   }
+}
+
+// Currencies Discogs accepts for marketplace prices (NOK, for one, is not among them).
+export const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'MXN', 'BRL', 'NZD', 'SEK', 'DKK', 'ZAR'] as const
+export type Currency = (typeof CURRENCIES)[number]
+
+export interface MarketStats {
+  numForSale: number
+  lowestPrice: number | null
+}
+
+/** Copies for sale and the lowest asking price. The API has no way to list individual listings. */
+export async function fetchMarketStats(releaseId: number, currency: Currency): Promise<MarketStats> {
+  const raw = await getJson<{ num_for_sale?: number; lowest_price?: { value: number } | null }>(
+    `/marketplace/stats/${releaseId}`,
+    { curr_abbr: currency },
+    0,
+  )
+  return { numForSale: raw.num_for_sale ?? 0, lowestPrice: raw.lowest_price?.value ?? null }
 }

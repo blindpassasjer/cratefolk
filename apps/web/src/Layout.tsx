@@ -1,6 +1,7 @@
 import { Disc3, Heart, LogOut, Users } from 'lucide-react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from './auth'
+import { ThemeToggle } from './theme'
 
 export function Logo() {
   return (
@@ -39,6 +40,7 @@ export default function Layout() {
             )}
           </nav>
           <span className="hidden text-sm text-ink-500 sm:block">{user?.name}</span>
+          <ThemeToggle />
           <button
             onClick={() => void logout()}
             className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-ink-300 hover:text-ink-100"

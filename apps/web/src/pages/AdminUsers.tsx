@@ -56,10 +56,10 @@ export default function AdminUsers() {
         <input className={input} placeholder="Name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         <input className={input} type="email" placeholder="Email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
         <input className={input} type="password" placeholder="Password (8+ chars)" minLength={8} required autoComplete="new-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
-        <button className="rounded-md bg-wax px-4 py-2 text-sm font-medium text-ink-950 hover:bg-wax-hover">Create user</button>
+        <button className="rounded-md bg-wax px-4 py-2 text-sm font-medium text-on-wax hover:bg-wax-hover">Create user</button>
       </form>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
 
       <div className="overflow-x-auto rounded-xl border border-ink-800">
         <table className="w-full text-left text-sm">
@@ -89,7 +89,7 @@ export default function AdminUsers() {
                       >
                         {u.disabled ? 'Enable' : 'Disable'}
                       </button>
-                      <button className="text-red-400 hover:text-red-300" onClick={() => remove(u)}>Delete</button>
+                      <button className="text-danger hover:text-danger" onClick={() => remove(u)}>Delete</button>
                     </>
                   )}
                 </td>
