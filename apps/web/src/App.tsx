@@ -1,6 +1,7 @@
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { useAuth } from './auth'
 import Layout from './Layout'
+import Account from './pages/Account'
 import AdminUsers from './pages/AdminUsers'
 import Collection from './pages/Collection'
 import Login from './pages/Login'
@@ -25,6 +26,7 @@ export default function App() {
         <Route element={<Layout />}>
           <Route index element={<Collection />} />
           <Route path="wishlist" element={<Wishlist />} />
+          <Route path="account" element={<Account />} />
           <Route path="release/:id" element={<Release />} />
           <Route element={<RequireAuth admin />}>
             <Route path="admin" element={<AdminUsers />} />

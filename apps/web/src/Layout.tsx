@@ -1,4 +1,4 @@
-import { Heart, LogOut, Users } from 'lucide-react'
+import { Heart, LogOut, UserRound, Users } from 'lucide-react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from './auth'
 import CoffeeMenu from './CoffeeMenu'
@@ -40,7 +40,10 @@ export default function Layout() {
               </NavLink>
             )}
           </nav>
-          <span className="hidden text-sm text-ink-500 sm:block">{user?.name}</span>
+          <NavLink to="/account" className={link} title="Account settings">
+            <UserRound className="size-4" />
+            <span className="hidden max-w-32 truncate sm:inline">{user?.name}</span>
+          </NavLink>
           <CoffeeMenu />
           <ThemeToggle />
           <button

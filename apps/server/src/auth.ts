@@ -61,6 +61,12 @@ export function destroySession(c: Context): void {
   deleteCookie(c, COOKIE, { path: '/' })
 }
 
+/** After a password change: sign out every other device but keep the one making the change. */
+export function destroyOtherSessions(c: Context, userId: number): void {
+  const token = getCookie(c, COOKIE)
+  db.prepare('DELETE FROM sessions WHERE user_id = ? AND token_hash != ?').run(userId, token ? sha256(token) : '')
+}
+
 function lookupUser(c: Context): SessionUser | null {
   const token = getCookie(c, COOKIE)
   if (!token) return null
