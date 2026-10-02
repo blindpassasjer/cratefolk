@@ -37,7 +37,7 @@ export default function CoffeeMenu({ placement = 'down' }: { placement?: 'down' 
       </button>
 
       {open && (
-        <div role="dialog" aria-label="Buy me a coffee" className={`absolute z-30 overflow-hidden rounded-xl border border-ink-700 bg-ink-900 shadow-xl ${placement === 'up' ? 'bottom-full left-0 mb-2 w-60' : 'right-0 top-full mt-2 w-72'}`}>
+        <div role="dialog" aria-label="Buy me a coffee" className={`absolute z-30 overflow-hidden rounded-xl border border-ink-700 bg-ink-950 shadow-xl ${placement === 'up' ? 'bottom-full left-0 mb-2 w-60' : 'right-0 top-full mt-2 w-72'}`}>
           <div className="flex items-center gap-3 border-b border-ink-800 p-4">
             <img src={`${import.meta.env.BASE_URL}developer.jpg`} alt="" aria-hidden="true" className="size-10 rounded-full border-2 border-ink-700 object-cover" />
             <div>

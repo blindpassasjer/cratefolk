@@ -122,13 +122,28 @@ export default function AddRecord({
             ))}
           </div>
           <div className="flex gap-2">
-            <input
-              ref={inputRef}
-              value={term}
-              onChange={(e) => setTerm(e.target.value)}
-              placeholder={current.placeholder}
-              className="min-w-0 flex-1 rounded-md border border-ink-700 bg-ink-950 px-3 py-2 text-sm outline-none focus:border-wax"
-            />
+            <div className="relative min-w-0 flex-1">
+              <input
+                ref={inputRef}
+                value={term}
+                onChange={(e) => setTerm(e.target.value)}
+                placeholder={current.placeholder}
+                className="w-full rounded-md border border-ink-700 bg-ink-950 py-2 pl-3 pr-8 text-sm outline-none focus:border-wax"
+              />
+              {term && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTerm('')
+                    inputRef.current?.focus()
+                  }}
+                  aria-label="Clear search"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-ink-500 hover:text-ink-100"
+                >
+                  <X className="size-4" />
+                </button>
+              )}
+            </div>
             <button className="flex items-center gap-2 rounded-md bg-wax px-4 py-2 text-sm font-medium text-on-wax hover:bg-wax-hover">
               <Search className="size-4" /> Search
             </button>
