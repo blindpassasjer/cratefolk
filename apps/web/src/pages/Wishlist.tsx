@@ -6,7 +6,8 @@ import { api, CURRENCIES, type WishItem } from '../api'
 import { useAuth } from '../auth'
 import Market from '../Market'
 import SearchBar from '../SearchBar'
-import { matchesQuery } from '../search'
+import FilterBar from '../FilterBar'
+import { filterOptions, matchesFilters, matchesQuery, SORTS, sortItems, type Filters, type SortKey } from '../search'
 import ShareExport from '../ShareExport'
 import Cover from '../Cover'
 
@@ -17,8 +18,22 @@ export default function Wishlist() {
   const [error, setError] = useState<string | null>(null)
   const [params, setParams] = useSearchParams()
   const query = params.get('q') ?? ''
-  const setQuery = (q: string) => setParams(q ? { q } : {}, { replace: true })
-  const shown = items?.filter((w) => matchesQuery(w, query)) ?? null
+  const sortParam = params.get('sort')
+  const sorts = SORTS.filter((s) => s.key !== 'price')
+  const sort: SortKey = sorts.some((s) => s.key === sortParam) ? (sortParam as SortKey) : 'added'
+  const filters: Filters = { format: params.get('format') ?? '', decade: params.get('decade') ?? '', country: params.get('country') ?? '' }
+  const setParam = (name: string, value: string) =>
+    setParams((prev) => {
+      const next = new URLSearchParams(prev)
+      if (value) next.set(name, value)
+      else next.delete(name)
+      return next
+    }, { replace: true })
+  const setQuery = (q: string) => setParam('q', q)
+  const clearAll = () => setParams({}, { replace: true })
+  const filtering = !!query || Object.values(filters).some(Boolean)
+  const shown = items ? sortItems(items.filter((w) => matchesQuery(w, query) && matchesFilters(w, filters)), sort) : null
+  const options = filterOptions(items ?? [])
 
   const load = useCallback(async () => {
     try {
@@ -39,7 +54,7 @@ export default function Wishlist() {
           <h1 className="text-2xl font-semibold tracking-tight">Wishlist</h1>
           {items && shown && (
             <p className="text-sm text-ink-500">
-              {query ? `${shown.length} of ${items.length}` : items.length} {items.length === 1 ? 'record' : 'records'} you're after
+              {filtering ? `${shown.length} of ${items.length}` : items.length} {items.length === 1 ? 'record' : 'records'} you're after
             </p>
           )}
         </div>
@@ -67,11 +82,15 @@ export default function Wishlist() {
         <SearchBar value={query} onChange={setQuery} placeholder="Search artist, title, label, catalog no. or barcode  ( / )" />
       )}
 
+      {items && items.length > 0 && (
+        <FilterBar sort={sort} onSort={(s) => setParam('sort', s === 'added' ? '' : s)} filters={filters} onFilter={setParam} options={options} sorts={sorts} />
+      )}
+
       {error && <p className="text-sm text-danger">{error}</p>}
 
       {items && items.length > 0 && shown?.length === 0 && (
         <p className="py-16 text-center text-sm text-ink-500">
-          No records match “{query}”. <button onClick={() => setQuery('')} className="text-wax hover:underline">Clear search</button>
+          No records match. <button onClick={clearAll} className="text-wax hover:underline">Clear search and filters</button>
         </p>
       )}
 
@@ -93,7 +112,7 @@ export default function Wishlist() {
               <div className="truncate text-xs text-ink-500">{[w.country, w.label, w.catno].filter(Boolean).join(' · ')}</div>
             </Link>
             <div className="mt-2">
-              <Market releaseId={w.releaseId} currency={user?.currency ?? 'USD'} search={`${w.artist} ${w.title}`} />
+              {w.releaseId > 0 && <Market releaseId={w.releaseId} currency={user?.currency ?? 'USD'} search={`${w.artist} ${w.title}`} />}
             </div>
           </div>
         ))}
