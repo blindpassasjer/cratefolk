@@ -3,6 +3,7 @@ import path from 'node:path'
 import { config } from './config.js'
 import { db } from './db.js'
 import { DiscogsError, downloadImage, fetchRelease } from './discogs.js'
+import { prefetchTrivia } from './trivia.js'
 
 const coversDir = path.join(config.dataDir, 'covers')
 fs.mkdirSync(coversDir, { recursive: true })
@@ -42,6 +43,7 @@ export async function ensureRelease(id: number, userId: number): Promise<void> {
     tracklist: JSON.stringify(r.tracklist),
     hasCover: image ? 1 : 0,
   })
+  prefetchTrivia(id)
 }
 
 export interface ManualRelease {
@@ -61,7 +63,7 @@ export interface ManualRelease {
 
 /** Stores a record that isn't on Discogs. It gets the next free negative ID so it can never collide with a Discogs ID. */
 export function createManualRelease(r: ManualRelease, ownerId: number): number {
-  return db.transaction(() => {
+  const id = db.transaction(() => {
     const min = (db.prepare('SELECT MIN(id) AS id FROM releases').get() as { id: number | null }).id ?? 0
     const id = Math.min(min, 0) - 1
     if (r.cover) fs.writeFileSync(coverPath(id), r.cover)
@@ -79,6 +81,8 @@ export function createManualRelease(r: ManualRelease, ownerId: number): number {
     })
     return id
   })()
+  prefetchTrivia(id)
+  return id
 }
 
 /** Replaces the fields of a manual record. `cover`: a Buffer replaces the image, null removes it, undefined keeps it. */
@@ -92,7 +96,10 @@ export function updateManualRelease(id: number, r: Omit<ManualRelease, 'cover'>,
        WHERE id = @id`,
     ).run({ ...r, id, genres: JSON.stringify(r.genres), tracklist: JSON.stringify(r.tracklist) })
     if (cover !== undefined) db.prepare('UPDATE releases SET has_cover = ? WHERE id = ?').run(cover ? 1 : 0, id)
+    // The title or artist may have changed, so what was found for the old ones no longer applies.
+    db.prepare('DELETE FROM trivia WHERE release_id = ?').run(id)
   })()
+  prefetchTrivia(id)
 }
 
 /** Deletes a manual record together with its copies and wishlist entry (only its creator can have any). */

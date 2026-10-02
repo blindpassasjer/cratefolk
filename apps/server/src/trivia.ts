@@ -236,6 +236,15 @@ function dataFacts(r: ReleaseRow, userId: number): string[] {
   return facts.length ? facts.slice(0, 3) : [`Nothing more is known about “${r.title}” by ${r.artist} yet.`]
 }
 
+/** Fills the Wikipedia caches for a new release in the background, so its page already has trivia the first time it is opened. */
+export function prefetchTrivia(releaseId: number): void {
+  const release = db.prepare('SELECT artist, title FROM releases WHERE id = ?').get(releaseId) as { artist: string; title: string } | undefined
+  if (!release) return
+  void cached({ table: 'trivia', keyColumn: 'release_id' }, releaseId, () => albumLookup(release.artist, release.title))
+    .then((album) => album ?? cached({ table: 'artist_trivia', keyColumn: 'artist_key' }, fold(stripParens(release.artist)), () => artistLookup(release.artist)))
+    .catch(() => {})
+}
+
 /** Something to say about a release: its album article, else its artist's article, else facts from its own data. */
 export async function triviaFor(releaseId: number, userId: number): Promise<ReleaseTrivia | null> {
   const release = db
