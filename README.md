@@ -8,7 +8,7 @@ A self-hosted vinyl collection manager. Your database is the source of truth; Di
 
 ## Run with Docker
 
-The image is published to GitHub Container Registry as `ghcr.io/blindpassasjer/waxcrate` (`linux/amd64` and `linux/arm64`). Tags: `latest` and `X.Y.Z` for releases, `edge` for the current `main`.
+The image is published to GitHub Container Registry as `ghcr.io/blindpassasjer/waxcrate` (`linux/amd64` and `linux/arm64`). Tags: `latest` and `X.Y.Z` for releases.
 
 ```sh
 cp .env.example .env   # set ADMIN_EMAIL and ADMIN_PASSWORD
