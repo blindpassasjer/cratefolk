@@ -13,7 +13,7 @@ cp .env.example .env   # set ADMIN_EMAIL and ADMIN_PASSWORD
 docker compose up -d
 ```
 
-Open http://localhost:6170 and sign in with the admin credentials. Data lives in the `waxcrate-data` volume (SQLite).
+Open http://localhost:6170 and sign in with the admin credentials. Data lives in the `waxcrate-data` volume (SQLite). If you use `env_file: .env`, do not put `DATA_DIR` or `PORT` in it, and keep `DATA_DIR: /data` under `environment:` so nothing can redirect the database outside the volume.
 
 - The admin account is created from `ADMIN_EMAIL` / `ADMIN_PASSWORD` on every start, and its password is re-synced from the environment, so changing the variable and restarting is how you reset it.
 - There is no public sign-up. The admin creates accounts under **Users**.

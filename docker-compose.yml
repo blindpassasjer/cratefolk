@@ -10,6 +10,7 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD}
       DISCOGS_TOKEN: ${DISCOGS_TOKEN:-}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      DATA_DIR: /data   # must match the volume mount below
     volumes:
       - waxcrate-data:/data
 
