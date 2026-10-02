@@ -1,0 +1,17 @@
+services:
+  waxcrate:
+    build: .
+    # image: ghcr.io/<your-github-user>/waxcrate:latest
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?set ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD}
+      DISCOGS_TOKEN: ${DISCOGS_TOKEN:-}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    volumes:
+      - waxcrate-data:/data
+
+volumes:
+  waxcrate-data:

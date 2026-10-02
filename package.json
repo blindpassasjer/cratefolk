@@ -1,0 +1,18 @@
+{
+  "name": "waxcrate",
+  "private": true,
+  "version": "0.0.1",
+  "license": "Apache-2.0",
+  "type": "module",
+  "workspaces": ["apps/*"],
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev": "concurrently -n server,web -c cyan,magenta \"npm run dev -w @waxcrate/server\" \"npm run dev -w @waxcrate/web\"",
+    "build": "npm run build -w @waxcrate/web && npm run build -w @waxcrate/server",
+    "start": "npm run start -w @waxcrate/server",
+    "typecheck": "npm run typecheck -w @waxcrate/server && npm run typecheck -w @waxcrate/web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}
