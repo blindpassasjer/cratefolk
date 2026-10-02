@@ -84,8 +84,9 @@ export default function Account() {
 
   return (
     <div className="space-y-10">
-      <div className="mx-auto max-w-xl space-y-6">
+      <div className="space-y-6">
         <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
+        <div className="grid items-start gap-6 md:grid-cols-2 xl:grid-cols-3">
 
         <Card title="Profile" hint={isAdmin ? 'The admin email is set with ADMIN_EMAIL in your environment, so only the name can be changed here.' : undefined}>
           <form onSubmit={saveProfile} className="space-y-4">
@@ -138,6 +139,7 @@ export default function Account() {
             </select>
           </Field>
         </Card>
+        </div>
       </div>
       {isAdmin && <AdminUsers />}
     </div>
