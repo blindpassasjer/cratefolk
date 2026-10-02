@@ -1,14 +1,11 @@
-import { Archive, BarChart3, Disc3, Heart, LogOut, Plus, Settings2, Tag, UserRound, X } from 'lucide-react'
+import { Archive, BarChart3, Disc3, Heart, Plus, Settings2, Tag, X } from 'lucide-react'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { api, type CollectionGroup } from './api'
-import { useAuth } from './auth'
-import CoffeeMenu from './CoffeeMenu'
 import { useCrates } from './crates'
 import { Logo } from './Logo'
 import ManageCollections from './ManageCollections'
 import { useToast } from './notify'
-import { ThemeToggle } from './theme'
 
 // Search text, sort and filters survive switching between crates.
 const KEEP = ['q', 'sort', 'format', 'decade', 'country']
@@ -22,9 +19,8 @@ function Count({ children }: { children: ReactNode }) {
   return <span className="ml-auto text-xs tabular-nums text-ink-500">{children}</span>
 }
 
-/** Navigation: Collection with its crates, Wishlist, Stats and the account. A drawer on phones, a fixed panel on wide screens. */
+/** Navigation: Collection with its crates, Wishlist and Stats. A drawer on phones, a fixed panel on wide screens. */
 export default function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { user, logout } = useAuth()
   const { groups, totals, refresh, manage } = useCrates()
   const { pathname } = useLocation()
   const [params] = useSearchParams()
@@ -139,18 +135,6 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
           </div>
         </nav>
 
-        <div className="shrink-0 space-y-1 border-t border-ink-800 p-3">
-          <Link to="/account" onClick={onClose} className={item(pathname === '/account')} title="Account settings">
-            <UserRound className="size-4 shrink-0" /> <span className="truncate">{user?.name}</span>
-          </Link>
-          <div className="flex items-center justify-between px-1">
-            <CoffeeMenu placement="up" />
-            <ThemeToggle />
-            <button onClick={() => void logout()} title="Sign out" aria-label="Sign out" className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-ink-300 hover:text-ink-100 sm:px-3">
-              <LogOut className="size-4" />
-            </button>
-          </div>
-        </div>
       </aside>
     </>
   )
