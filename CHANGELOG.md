@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.4 (2026-10-03)
+
+### Changed
+- Every record page now has something in its "Did you know?" box. If the album has no Wikipedia article, it shows facts from the artist's article (headed "About" and the artist's name). If that is missing too, it shows facts worked out from the record itself: its age, track count and runtime, longest track, label and country, genre, and how many records by the artist you own.
+
+### Upgrading
+A new `artist_trivia` table is created automatically on the first start. Looking up trivia now also sends the artist's name to Wikipedia.
+
 ## 0.3.3 (2026-10-03)
 
 ### Added
