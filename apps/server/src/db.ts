@@ -145,6 +145,16 @@ const migrations: string[] = [
   );
   CREATE INDEX password_resets_user_id ON password_resets(user_id);
   `,
+  `
+  -- Wikipedia trivia per release. facts is NULL when no article was found, so that is cached too.
+  CREATE TABLE trivia (
+    release_id INTEGER PRIMARY KEY REFERENCES releases(id) ON DELETE CASCADE,
+    facts      TEXT,
+    title      TEXT,
+    url        TEXT,
+    fetched_at INTEGER NOT NULL
+  );
+  `,
 ]
 
 fs.mkdirSync(config.dataDir, { recursive: true })

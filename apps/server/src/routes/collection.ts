@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { requireUser, type AppEnv } from '../auth.js'
 import { db } from '../db.js'
 import { DiscogsError } from '../discogs.js'
+import { triviaFor } from '../trivia.js'
 import { canAccessRelease, coverPath, createManualRelease, deleteManualRelease, ensureRelease, updateManualRelease } from '../releases.js'
 
 export const collectionRoutes = new Hono<AppEnv>()
@@ -199,6 +200,12 @@ releaseRoutes.get('/:id/cover', (c) => {
     // Discogs covers never change; a manual record's cover can be replaced when it is edited.
     'Cache-Control': id > 0 ? 'private, max-age=31536000, immutable' : 'private, no-cache',
   })
+})
+
+releaseRoutes.get('/:id/trivia', async (c) => {
+  const id = Number(c.req.param('id'))
+  if (!Number.isInteger(id) || !canAccessRelease(id, c.get('user').id)) return c.json({ error: 'Release not found' }, 404)
+  return c.json({ trivia: await triviaFor(id) })
 })
 
 releaseRoutes.get('/:id', (c) => {

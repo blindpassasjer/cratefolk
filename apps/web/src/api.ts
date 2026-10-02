@@ -106,6 +106,12 @@ export interface ReleaseDetail {
   hasCover: number
 }
 
+export interface Trivia {
+  facts: string[]
+  title: string
+  url: string
+}
+
 export type OwnedCopy = Pick<Copy, 'copyId' | 'mediaCondition' | 'sleeveCondition' | 'notes' | 'addedAt' | 'collectionIds' | 'forSale' | 'askingPrice' | 'priceCurrency'>
 
 export type WishItem = Omit<Copy, 'copyId' | 'mediaCondition' | 'sleeveCondition' | 'collectionIds' | 'forSale' | 'askingPrice' | 'priceCurrency'> & { wishId: number }

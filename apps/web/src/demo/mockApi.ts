@@ -206,6 +206,23 @@ on('GET', '/releases/:id', (m) => {
   }
 })
 
+// The real app looks these up on Wikipedia; the demo has no server, so a few records carry fixed examples.
+const wiki = (page: string, title: string, facts: string[]) => ({ facts, title, url: `https://en.wikipedia.org/wiki/${page}` })
+const TRIVIA: Record<number, ReturnType<typeof wiki>> = {
+  1001: wiki('Kind_of_Blue', 'Kind of Blue', [
+    "The album was recorded at Columbia's 30th Street Studio in New York City in two sessions on March 2 and April 22, 1959.",
+    'The first release with a producer credit was the 1987 CD, which credited only Macero.',
+  ]),
+  1009: wiki('The_Dark_Side_of_the_Moon', 'The Dark Side of the Moon', [
+    'After a change in chart methodology in 2009, which allowed catalogue titles to be included in the Billboard 200, The Dark Side of the Moon returned to the chart at number 189 on 12 December of that year for its 742nd charting week.',
+  ]),
+  1010: wiki('Rumours_(album)', 'Rumours (album)', [
+    "After a debut at number seven, Rumours peaked at the top of the UK Albums Chart in January 1978, becoming Fleetwood Mac's first number one album in the country.",
+    'In February, the band and co-producers Caillat and Dashut won the 1978 Grammy Award for Album of the Year.',
+  ]),
+}
+on('GET', '/releases/:id/trivia', (m) => ({ trivia: TRIVIA[Number(m[1])] ?? null }))
+
 // ---- collections (crates) ----
 const groupRow = (g: { id: number; name: string }) => ({ ...g, count: load().groupCopies.filter((x) => x.groupId === g.id).length })
 const cleanName = (b: Body) => String(b.name ?? '').trim().slice(0, 60) || fail('Give the crate a name (up to 60 characters)')

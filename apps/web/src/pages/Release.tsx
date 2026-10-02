@@ -1,9 +1,9 @@
-import { ArrowLeft, Heart, Pencil, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Heart, Lightbulb, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../auth'
 import Market, { money } from '../Market'
-import { api, GRADES, type Grade, type OwnedCopy, type ReleaseDetail } from '../api'
+import { api, GRADES, type Grade, type OwnedCopy, type ReleaseDetail, type Trivia } from '../api'
 import { useCrates } from '../crates'
 import CollectionPicker from '../CollectionPicker'
 import ManualRecord from '../ManualRecord'
@@ -45,6 +45,7 @@ export default function Release() {
   const { user } = useAuth()
   const [data, setData] = useState<{ release: ReleaseDetail; copies: OwnedCopy[]; wishlisted: { id: number } | null } | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [trivia, setTrivia] = useState<Trivia | null>(null)
   const { groups, refresh } = useCrates()
   const [editing, setEditing] = useState(false)
   const toast = useToast()
@@ -55,6 +56,7 @@ export default function Release() {
     try {
       const [detail] = await Promise.all([api<never>(`/releases/${id}`), refresh()])
       setData(detail)
+      setError(null)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load release')
     }
@@ -63,6 +65,18 @@ export default function Release() {
   useEffect(() => {
     void load()
   }, [load])
+
+  // Trivia is a bonus fetched on its own, so a slow or failed Wikipedia lookup never delays the page.
+  useEffect(() => {
+    let current = true
+    setTrivia(null)
+    api<{ trivia: Trivia | null }>(`/releases/${id}/trivia`)
+      .then((r) => current && setTrivia(r.trivia))
+      .catch(() => {})
+    return () => {
+      current = false
+    }
+  }, [id])
 
   async function act(fn: () => Promise<unknown>, success: string) {
     try {
@@ -86,14 +100,28 @@ export default function Release() {
       : act(() => api('/wishlist', { method: 'POST', json: { releaseId: Number(id) } }), 'Added to your wishlist')
 
   async function remove(copyId: number) {
+    const last = data?.copies.length === 1
+    // A hand-added record with no copies and no wishlist entry would be unreachable, so it goes with its last copy.
+    const withRecord = last && Number(id) < 0 && !data?.wishlisted
     const ok = await confirm({
-      title: 'Remove this copy?',
-      message: 'It will be taken out of your collection and any crates it is in.',
-      confirmLabel: 'Remove copy',
+      title: withRecord ? 'Remove this record?' : 'Remove this copy?',
+      message: withRecord
+        ? 'This record you added by hand will be deleted along with its only copy. This cannot be undone.'
+        : 'It will be taken out of your collection and any crates it is in.',
+      confirmLabel: withRecord ? 'Delete record' : 'Remove copy',
       danger: true,
     })
     if (!ok) return
-    const last = data?.copies.length === 1
+    if (withRecord) {
+      try {
+        await api(`/releases/${id}`, { method: 'DELETE' })
+        toast.success('Record deleted')
+        navigate('/', { replace: true })
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Could not delete the record')
+      }
+      return
+    }
     await act(() => api(`/collection/${copyId}`, { method: 'DELETE' }), 'Copy removed from your collection')
     if (last) navigate('/', { replace: true })
   }
@@ -160,6 +188,26 @@ export default function Release() {
               </div>
             ))}
           </dl>
+
+          {trivia && (
+            <aside className="space-y-2 rounded-lg border border-ink-800 bg-ink-900/60 p-4 text-sm">
+              <h2 className="flex items-center gap-2 font-medium text-ink-300">
+                <Lightbulb className="size-4 text-wax" /> Did you know?
+              </h2>
+              <ul className="list-disc space-y-1.5 pl-5 marker:text-ink-700">
+                {trivia.facts.map((f) => (
+                  <li key={f}>{f}</li>
+                ))}
+              </ul>
+              <p className="text-xs text-ink-500">
+                From{' '}
+                <a href={trivia.url} target="_blank" rel="noreferrer" className="hover:text-wax hover:underline">
+                  “{trivia.title}” on Wikipedia
+                </a>
+                , available under CC BY-SA 4.0.
+              </p>
+            </aside>
+          )}
 
           <section className="space-y-1.5">
             {r.id > 0 && (
