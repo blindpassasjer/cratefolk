@@ -137,6 +137,14 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
           </div>
         </nav>
 
+        <div className="shrink-0 space-y-0.5 border-t border-ink-800 p-3 lg:hidden">
+          <Link to="/account" onClick={onClose} className={item(pathname === '/account')}>
+            <UserRound className="size-4 shrink-0" /> <span className="truncate">{user?.name}</span>
+          </Link>
+          <button onClick={() => void logout()} className={item(false)}>
+            <LogOut className="size-4" /> Sign out
+          </button>
+        </div>
       </aside>
     </>
   )
