@@ -69,26 +69,29 @@ const shape = (r: Row) => ({
   link: { text: discogsUrl(r.releaseId), hyperlink: discogsUrl(r.releaseId) },
 })
 
-// All owned records, or just one collection with ?collection=ID.
+// All owned records, or just one collection with ?collection=ID, or only copies for sale with ?forSale=1.
 exportRoutes.get('/collection.xlsx', async (c) => {
   const userId = c.get('user').id
   const groupId = Number(c.req.query('collection')) || null
-  let name = 'collection'
+  const forSale = c.req.query('forSale') === '1'
+  let name = forSale ? 'for-sale' : 'collection'
   if (groupId) {
     const g = db.prepare('SELECT name FROM collections WHERE id = ? AND user_id = ?').get(groupId, userId) as { name: string } | undefined
-    if (!g) return c.json({ error: 'Collection not found' }, 404)
-    name = slug(g.name)
+    if (!g) return c.json({ error: 'Crate not found' }, 404)
+    name = slug(g.name) + (forSale ? '-for-sale' : '')
   }
   const rows = db
     .prepare(
       `SELECT r.id AS releaseId, r.artist, r.title, r.year, r.country, r.label, r.catno, r.format, r.barcode,
               r.genres, r.styles, c.media_condition AS media, c.sleeve_condition AS sleeve, c.notes,
+              CASE WHEN c.for_sale THEN 'Yes' ELSE '' END AS forSale, c.asking_price AS price, c.price_currency AS currency,
               substr(c.added_at, 1, 10) AS added,
               (SELECT group_concat(g.name, ', ') FROM collection_copies cc JOIN collections g ON g.id = cc.collection_id
                WHERE cc.copy_id = c.id) AS collections
        FROM copies c JOIN releases r ON r.id = c.release_id
        WHERE c.user_id = ?
        ${groupId ? 'AND c.id IN (SELECT copy_id FROM collection_copies WHERE collection_id = ?)' : ''}
+       ${forSale ? 'AND c.for_sale = 1' : ''}
        ORDER BY r.artist COLLATE NOCASE, r.year, r.title COLLATE NOCASE`,
     )
     .all(...(groupId ? [userId, groupId] : [userId])) as Row[]
@@ -97,6 +100,9 @@ exportRoutes.get('/collection.xlsx', async (c) => {
     ...COMMON,
     { header: 'Media', key: 'media', width: 8 },
     { header: 'Sleeve', key: 'sleeve', width: 8 },
+    { header: 'For sale', key: 'forSale', width: 9 },
+    { header: 'Asking price', key: 'price', width: 13 },
+    { header: 'Currency', key: 'currency', width: 9 },
     { header: 'Collections', key: 'collections', width: 24 },
     { header: 'Notes', key: 'notes', width: 36 },
     ...TAIL,

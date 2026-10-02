@@ -2,12 +2,41 @@ import { ArrowLeft, Heart, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../auth'
-import Market from '../Market'
+import Market, { money } from '../Market'
 import { api, GRADES, type CollectionGroup, type Grade, type OwnedCopy, type ReleaseDetail } from '../api'
 import CollectionPicker from '../CollectionPicker'
+import { useDialog, useToast } from '../notify'
 import Cover from '../Cover'
 
 const select = 'rounded-md border border-ink-700 bg-ink-900 px-2 py-1 text-sm outline-none focus:border-wax'
+
+/** Asking price field that saves on blur or Enter, in the owner's currency. */
+function PriceInput({ copy, currency, onSave }: { copy: OwnedCopy; currency: string; onSave: (price: number | null) => void }) {
+  const [value, setValue] = useState(copy.askingPrice?.toString() ?? '')
+  useEffect(() => setValue(copy.askingPrice?.toString() ?? ''), [copy.askingPrice])
+
+  function commit() {
+    const n = value.trim() === '' ? null : Number(value.replace(',', '.'))
+    if (n !== null && (!Number.isFinite(n) || n <= 0)) return setValue(copy.askingPrice?.toString() ?? '')
+    if (n !== copy.askingPrice) onSave(n)
+  }
+
+  return (
+    <label className="flex items-center gap-2 text-ink-500">
+      Price
+      <input
+        inputMode="decimal"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+        placeholder="0.00"
+        className={`${select} w-24`}
+      />
+      <span className="text-xs">{copy.priceCurrency ?? currency}</span>
+    </label>
+  )
+}
 
 export default function Release() {
   const { id } = useParams()
@@ -15,6 +44,8 @@ export default function Release() {
   const [data, setData] = useState<{ release: ReleaseDetail; copies: OwnedCopy[]; wishlisted: { id: number } | null } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [groups, setGroups] = useState<CollectionGroup[]>([])
+  const toast = useToast()
+  const { confirm } = useDialog()
 
   const load = useCallback(async () => {
     try {
@@ -30,26 +61,35 @@ export default function Release() {
     void load()
   }, [load])
 
-  async function patch(copyId: number, body: Partial<Pick<OwnedCopy, 'mediaCondition' | 'sleeveCondition' | 'notes'>>) {
-    await api(`/collection/${copyId}`, { method: 'PATCH', json: body })
-    await load()
+  async function act(fn: () => Promise<unknown>, success: string) {
+    try {
+      await fn()
+      await load()
+      toast.success(success)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Something went wrong')
+    }
   }
 
-  async function addCopy() {
-    await api('/collection', { method: 'POST', json: { releaseId: Number(id) } })
-    await load()
-  }
+  const patch = (copyId: number, body: Partial<Pick<OwnedCopy, 'mediaCondition' | 'sleeveCondition' | 'notes' | 'askingPrice'>> & { forSale?: boolean }) =>
+    act(() => api(`/collection/${copyId}`, { method: 'PATCH', json: body }), 'Saved')
 
-  async function toggleWishlist() {
-    if (data?.wishlisted) await api(`/wishlist/${data.wishlisted.id}`, { method: 'DELETE' })
-    else await api('/wishlist', { method: 'POST', json: { releaseId: Number(id) } })
-    await load()
-  }
+  const addCopy = () =>
+    act(() => api('/collection', { method: 'POST', json: { releaseId: Number(id) } }), data?.copies.length ? 'Added another copy to your collection' : 'Added to your collection')
+
+  const toggleWishlist = () =>
+    data?.wishlisted
+      ? act(() => api(`/wishlist/${data.wishlisted!.id}`, { method: 'DELETE' }), 'Removed from your wishlist')
+      : act(() => api('/wishlist', { method: 'POST', json: { releaseId: Number(id) } }), 'Added to your wishlist')
 
   async function remove(copyId: number) {
-    if (!window.confirm('Remove this copy from your collection?')) return
-    await api(`/collection/${copyId}`, { method: 'DELETE' })
-    await load()
+    const ok = await confirm({
+      title: 'Remove this copy?',
+      message: 'It will be taken out of your collection and any crates it is in. The record stays on Discogs.',
+      confirmLabel: 'Remove copy',
+      danger: true,
+    })
+    if (ok) await act(() => api(`/collection/${copyId}`, { method: 'DELETE' }), 'Copy removed from your collection')
   }
 
   if (error) return <p className="text-sm text-danger">{error}</p>
@@ -90,7 +130,16 @@ export default function Release() {
 
           <section className="space-y-1.5">
             <h2 className="text-sm font-medium text-ink-300">On Discogs marketplace</h2>
-            <Market releaseId={r.id} currency={user?.currency ?? 'USD'} />
+            <Market releaseId={r.id} currency={user?.currency ?? 'USD'} search={`${r.artist} ${r.title}`} />
+            {copies.some((c) => c.forSale && c.askingPrice != null) && (
+              <p className="text-xs text-ink-500">
+                Your asking {copies.filter((c) => c.forSale && c.askingPrice != null).length === 1 ? 'price' : 'prices'}:{' '}
+                {copies
+                  .filter((c) => c.forSale && c.askingPrice != null)
+                  .map((c) => money(c.askingPrice!, c.priceCurrency ?? user?.currency ?? 'USD'))
+                  .join(', ')}
+              </p>
+            )}
           </section>
 
           <div className="flex flex-wrap gap-2">
@@ -126,6 +175,16 @@ export default function Release() {
                     </select>
                   </label>
                 ))}
+                <label className="flex items-center gap-2 text-ink-500">
+                  <input
+                    type="checkbox"
+                    checked={!!c.forSale}
+                    onChange={(e) => void patch(c.copyId, { forSale: e.target.checked })}
+                    className="accent-wax"
+                  />
+                  For sale
+                </label>
+                {!!c.forSale && <PriceInput copy={c} currency={user?.currency ?? 'USD'} onSave={(askingPrice) => void patch(c.copyId, { askingPrice })} />}
                 <span className="flex-1 text-xs text-ink-500">Added {c.addedAt.slice(0, 10)}</span>
                 <CollectionPicker variant="inline" copyId={c.copyId} selected={c.collectionIds} groups={groups} onChanged={() => void load()} />
                 <button onClick={() => void remove(c.copyId)} className="text-ink-500 hover:text-danger" aria-label="Remove copy">

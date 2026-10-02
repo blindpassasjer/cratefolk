@@ -14,7 +14,7 @@ const grade = z.enum(['M', 'NM', 'VG+', 'VG', 'G+', 'G', 'F', 'P']).nullable()
 
 const ITEM_SELECT = `
   SELECT w.id AS wishId, w.release_id AS releaseId, w.notes, w.added_at AS addedAt,
-         r.title, r.artist, r.year, r.country, r.label, r.catno, r.format, r.has_cover AS hasCover
+         r.title, r.artist, r.year, r.country, r.label, r.catno, r.format, r.barcode, r.has_cover AS hasCover
   FROM wishlist w JOIN releases r ON r.id = w.release_id`
 
 wishlistRoutes.get('/', (c) =>

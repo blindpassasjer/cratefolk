@@ -17,7 +17,8 @@ const condition = z.enum(['M', 'NM', 'VG+', 'VG', 'G+', 'G', 'F', 'P']).nullable
 const COPY_SELECT = `
   SELECT c.id AS copyId, c.release_id AS releaseId, c.media_condition AS mediaCondition,
          c.sleeve_condition AS sleeveCondition, c.notes, c.added_at AS addedAt,
-         r.title, r.artist, r.year, r.country, r.label, r.catno, r.format, r.has_cover AS hasCover,
+         c.for_sale AS forSale, c.asking_price AS askingPrice, c.price_currency AS priceCurrency,
+         r.title, r.artist, r.year, r.country, r.label, r.catno, r.format, r.barcode, r.has_cover AS hasCover,
          (SELECT group_concat(collection_id) FROM collection_copies WHERE copy_id = c.id) AS collectionIds
   FROM copies c JOIN releases r ON r.id = c.release_id`
 
@@ -30,10 +31,12 @@ const withIds = (row: unknown) => {
 
 collectionRoutes.get('/', (c) => {
   const groupId = Number(c.req.query('collection')) || null
+  const forSale = c.req.query('forSale') === '1'
   const rows = db
     .prepare(
       `${COPY_SELECT} WHERE c.user_id = ?
        ${groupId ? 'AND c.id IN (SELECT copy_id FROM collection_copies WHERE collection_id = ?)' : ''}
+       ${forSale ? 'AND c.for_sale = 1' : ''}
        ORDER BY c.added_at DESC, c.id DESC`,
     )
     .all(...(groupId ? [c.get('user').id, groupId] : [c.get('user').id]))
@@ -72,7 +75,13 @@ collectionRoutes.post('/', async (c) => {
 })
 
 const patchSchema = z
-  .object({ mediaCondition: condition, sleeveCondition: condition, notes: z.string().max(2000).nullable() })
+  .object({
+    mediaCondition: condition,
+    sleeveCondition: condition,
+    notes: z.string().max(2000).nullable(),
+    forSale: z.boolean(),
+    askingPrice: z.number().positive().max(1_000_000).nullable(),
+  })
   .partial()
 
 collectionRoutes.patch('/:id', async (c) => {
@@ -82,10 +91,19 @@ collectionRoutes.patch('/:id', async (c) => {
   const owned = db.prepare('SELECT 1 FROM copies WHERE id = ? AND user_id = ?').get(id, c.get('user').id)
   if (!owned) return c.json({ error: 'Copy not found' }, 404)
 
-  const { mediaCondition, sleeveCondition, notes } = parsed.data
+  const { mediaCondition, sleeveCondition, notes, forSale, askingPrice } = parsed.data
   if (mediaCondition !== undefined) db.prepare('UPDATE copies SET media_condition = ? WHERE id = ?').run(mediaCondition, id)
   if (sleeveCondition !== undefined) db.prepare('UPDATE copies SET sleeve_condition = ? WHERE id = ?').run(sleeveCondition, id)
   if (notes !== undefined) db.prepare('UPDATE copies SET notes = ? WHERE id = ?').run(notes, id)
+  if (forSale !== undefined) db.prepare('UPDATE copies SET for_sale = ? WHERE id = ?').run(forSale ? 1 : 0, id)
+  if (askingPrice !== undefined) {
+    // The price is recorded in the owner's current currency so it stays meaningful if they switch later.
+    db.prepare('UPDATE copies SET asking_price = ?, price_currency = ? WHERE id = ?').run(
+      askingPrice,
+      askingPrice === null ? null : c.get('user').currency,
+      id,
+    )
+  }
   return c.json({ copy: withIds(db.prepare(`${COPY_SELECT} WHERE c.id = ?`).get(id)) })
 })
 
@@ -119,7 +137,8 @@ releaseRoutes.get('/:id', (c) => {
   const copies = db
     .prepare(
       `SELECT id AS copyId, media_condition AS mediaCondition, sleeve_condition AS sleeveCondition,
-              notes, added_at AS addedAt,
+              notes, added_at AS addedAt, for_sale AS forSale, asking_price AS askingPrice,
+              price_currency AS priceCurrency,
               (SELECT group_concat(collection_id) FROM collection_copies WHERE copy_id = copies.id) AS collectionIds
        FROM copies WHERE release_id = ? AND user_id = ? ORDER BY id`,
     )

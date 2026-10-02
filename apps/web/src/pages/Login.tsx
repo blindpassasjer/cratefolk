@@ -2,13 +2,14 @@ import { useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { Logo } from '../Layout'
+import { useToast } from '../notify'
 import { ThemeToggle } from '../theme'
 
 export default function Login() {
   const { user, loading, login } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const toast = useToast()
   const [busy, setBusy] = useState(false)
 
   if (!loading && user) return <Navigate to="/" replace />
@@ -16,11 +17,10 @@ export default function Login() {
   async function submit(e: FormEvent) {
     e.preventDefault()
     setBusy(true)
-    setError(null)
     try {
       await login(email, password)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sign in failed')
+      toast.error(err instanceof Error ? err.message : 'Sign in failed')
     } finally {
       setBusy(false)
     }
@@ -46,7 +46,6 @@ export default function Login() {
           Password
           <input className={input} type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         </label>
-        {error && <p className="text-sm text-danger">{error}</p>}
         <button
           disabled={busy}
           className="w-full rounded-md bg-wax px-3 py-2 text-sm font-medium text-on-wax transition-colors hover:bg-wax-hover disabled:opacity-60"

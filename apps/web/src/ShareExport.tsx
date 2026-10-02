@@ -1,18 +1,21 @@
 import { Check, Copy, FileSpreadsheet, Link2, Share2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { api } from './api'
+import { useDialog, useToast } from './notify'
 
-type Kind = 'all' | 'group' | 'wishlist'
+type Kind = 'all' | 'group' | 'wishlist' | 'forsale'
 
 /** Popover with Excel export and a public read-only share link for the current view. */
 export default function ShareExport({ kind, collectionId, exportHref }: { kind: Kind; collectionId?: number; exportHref: string }) {
   const [open, setOpen] = useState(false)
   const [token, setToken] = useState<string | null | undefined>(undefined) // undefined = not loaded yet
   const [copied, setCopied] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const toast = useToast()
+  const { confirm } = useDialog()
   const ref = useRef<HTMLDivElement>(null)
   const input = useRef<HTMLInputElement>(null)
 
+  const noun = kind === 'wishlist' ? 'wishlist' : kind === 'group' ? 'crate' : kind === 'forsale' ? 'for-sale list' : 'library'
   const target = { kind, ...(collectionId ? { collectionId } : {}) }
   const url = token ? `${window.location.origin}/s/${token}` : ''
 
@@ -33,26 +36,36 @@ export default function ShareExport({ kind, collectionId, exportHref }: { kind: 
     const qs = new URLSearchParams({ kind, ...(collectionId ? { collection: String(collectionId) } : {}) })
     api<{ share: { token: string } | null }>(`/shares?${qs}`)
       .then((r) => setToken(r.share?.token ?? null))
-      .catch((e: Error) => setError(e.message))
-  }, [open, token, kind, collectionId])
+      .catch((e: Error) => {
+        toast.error(e.message)
+        setToken(null)
+      })
+  }, [open, token, kind, collectionId, toast])
 
   async function create() {
-    setError(null)
     try {
       setToken((await api<{ share: { token: string } }>('/shares', { method: 'POST', json: target })).share.token)
+      toast.success('Share link created')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not create the link')
+      toast.error(e instanceof Error ? e.message : 'Could not create the link')
     }
   }
 
   async function stop() {
-    if (!token || !window.confirm('Stop sharing? Anyone with the current link will lose access.')) return
-    setError(null)
+    if (!token) return
+    const ok = await confirm({
+      title: 'Stop sharing?',
+      message: `Anyone with the current link will lose access to this ${noun}.`,
+      confirmLabel: 'Stop sharing',
+      danger: true,
+    })
+    if (!ok) return
     try {
       await api(`/shares/${token}`, { method: 'DELETE' })
       setToken(null)
+      toast.success('Sharing stopped. The old link no longer works.')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not stop sharing')
+      toast.error(e instanceof Error ? e.message : 'Could not stop sharing')
     }
   }
 
@@ -61,13 +74,13 @@ export default function ShareExport({ kind, collectionId, exportHref }: { kind: 
       await navigator.clipboard.writeText(url)
     } catch {
       input.current?.select() // clipboard API needs HTTPS; fall back to manual copy
+      toast.info('Press Ctrl/Cmd+C to copy the selected link')
       return
     }
+    toast.success('Link copied to clipboard')
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
   }
-
-  const noun = kind === 'wishlist' ? 'wishlist' : kind === 'group' ? 'collection' : 'library'
 
   return (
     <div ref={ref} className="relative">
@@ -91,11 +104,13 @@ export default function ShareExport({ kind, collectionId, exportHref }: { kind: 
             <h3 className="flex items-center gap-1.5 font-medium">
               <Link2 className="size-4" /> Share link
             </h3>
-            {token === undefined && !error && <p className="text-xs text-ink-500">Loading…</p>}
+            {token === undefined && <p className="text-xs text-ink-500">Loading…</p>}
             {token === null && (
               <>
                 <p className="text-xs text-ink-500">
-                  Anyone with the link can view this {noun}, read-only. Your notes, grades and prices stay private.
+                  {kind === 'forsale'
+                    ? 'Anyone with the link can view the copies you have for sale, with their grades and asking prices. Your notes stay private.'
+                    : `Anyone with the link can view this ${noun}, read-only. Your notes, grades and prices stay private.`}
                 </p>
                 <button onClick={() => void create()} className="w-full rounded-md bg-wax px-3 py-2 font-medium text-on-wax hover:bg-wax-hover">
                   Create link
@@ -121,7 +136,6 @@ export default function ShareExport({ kind, collectionId, exportHref }: { kind: 
                 </button>
               </>
             )}
-            {error && <p className="text-xs text-danger">{error}</p>}
           </section>
         </div>
       )}

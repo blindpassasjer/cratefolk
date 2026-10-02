@@ -1,10 +1,13 @@
 import { Check, Heart, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import AddRecord from '../AddRecord'
 import { api, CURRENCIES, type WishItem } from '../api'
 import { useAuth } from '../auth'
 import Market from '../Market'
+import { useToast } from '../notify'
+import SearchBar from '../SearchBar'
+import { matchesQuery } from '../search'
 import ShareExport from '../ShareExport'
 import Cover from '../Cover'
 
@@ -13,6 +16,11 @@ export default function Wishlist() {
   const [items, setItems] = useState<WishItem[] | null>(null)
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const toast = useToast()
+  const [params, setParams] = useSearchParams()
+  const query = params.get('q') ?? ''
+  const setQuery = (q: string) => setParams(q ? { q } : {}, { replace: true })
+  const shown = items?.filter((w) => matchesQuery(w, query)) ?? null
 
   const load = useCallback(async () => {
     try {
@@ -26,13 +34,13 @@ export default function Wishlist() {
     void load()
   }, [load])
 
-  async function act(fn: () => Promise<unknown>) {
-    setError(null)
+  async function act(fn: () => Promise<unknown>, success: string) {
     try {
       await fn()
       await load()
+      toast.success(success)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong')
+      toast.error(e instanceof Error ? e.message : 'Something went wrong')
     }
   }
 
@@ -41,7 +49,11 @@ export default function Wishlist() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Wishlist</h1>
-          {items && <p className="text-sm text-ink-500">{items.length} {items.length === 1 ? 'record' : 'records'} you're after</p>}
+          {items && shown && (
+            <p className="text-sm text-ink-500">
+              {query ? `${shown.length} of ${items.length}` : items.length} {items.length === 1 ? 'record' : 'records'} you're after
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-2 text-xs text-ink-500">
@@ -63,7 +75,17 @@ export default function Wishlist() {
         </div>
       </div>
 
+      {items && items.length > 0 && (
+        <SearchBar value={query} onChange={setQuery} placeholder="Search artist, title, label, catalog no. or barcode  ( / )" />
+      )}
+
       {error && <p className="text-sm text-danger">{error}</p>}
+
+      {items && items.length > 0 && shown?.length === 0 && (
+        <p className="py-16 text-center text-sm text-ink-500">
+          No records match “{query}”. <button onClick={() => setQuery('')} className="text-wax hover:underline">Clear search</button>
+        </p>
+      )}
 
       {items?.length === 0 && (
         <div className="flex flex-col items-center gap-3 py-24 text-center">
@@ -74,7 +96,7 @@ export default function Wishlist() {
       )}
 
       <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-        {items?.map((w) => (
+        {shown?.map((w) => (
           <div key={w.wishId} className="group">
             <Link to={`/release/${w.releaseId}`} className="block">
               <Cover releaseId={w.releaseId} hasCover={!!w.hasCover} className="rounded-md shadow-lg shadow-black/40 ring-1 ring-ink-800 transition group-hover:ring-wax/60" />
@@ -83,17 +105,17 @@ export default function Wishlist() {
               <div className="truncate text-xs text-ink-500">{[w.country, w.label, w.catno].filter(Boolean).join(' · ')}</div>
             </Link>
             <div className="mt-2">
-              <Market releaseId={w.releaseId} currency={user?.currency ?? 'USD'} />
+              <Market releaseId={w.releaseId} currency={user?.currency ?? 'USD'} search={`${w.artist} ${w.title}`} />
             </div>
             <div className="mt-3 flex gap-2">
               <button
-                onClick={() => void act(() => api(`/wishlist/${w.wishId}/acquire`, { method: 'POST', json: {} }))}
+                onClick={() => void act(() => api(`/wishlist/${w.wishId}/acquire`, { method: 'POST', json: {} }), `Moved “${w.title}” to your collection`)}
                 className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-ink-700 px-2 py-1.5 text-xs hover:border-wax"
               >
                 <Check className="size-3.5 text-wax" /> Got it
               </button>
               <button
-                onClick={() => void act(() => api(`/wishlist/${w.wishId}`, { method: 'DELETE' }))}
+                onClick={() => void act(() => api(`/wishlist/${w.wishId}`, { method: 'DELETE' }), `Removed “${w.title}” from your wishlist`)}
                 aria-label="Remove from wishlist"
                 className="rounded-md border border-ink-700 px-2 py-1.5 text-ink-500 hover:border-danger hover:text-danger"
               >

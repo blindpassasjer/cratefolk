@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { api, ApiError } from '../api'
 import Cover from '../Cover'
+import { money } from '../Market'
 import { Logo } from '../Layout'
 import { ThemeToggle } from '../theme'
 
@@ -16,12 +17,17 @@ interface SharedItem {
   format: string
   hasCover: number
   copies: number
+  copyId?: number
+  mediaCondition?: string | null
+  sleeveCondition?: string | null
+  askingPrice?: number | null
+  priceCurrency?: string | null
 }
 
 interface SharedView {
   title: string
   owner: string
-  kind: 'all' | 'group' | 'wishlist'
+  kind: 'all' | 'group' | 'wishlist' | 'forsale'
   items: SharedItem[]
 }
 
@@ -59,16 +65,22 @@ export default function Shared() {
           <div className="space-y-6">
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">
-                {data.kind === 'group' ? data.title : data.kind === 'wishlist' ? `${data.owner}'s wishlist` : `${data.owner}'s collection`}
+                {data.kind === 'group'
+                  ? data.title
+                  : data.kind === 'wishlist'
+                    ? `${data.owner}'s wishlist`
+                    : data.kind === 'forsale'
+                      ? `Records for sale by ${data.owner}`
+                      : `${data.owner}'s collection`}
               </h1>
               <p className="text-sm text-ink-500">
-                {data.kind === 'group' && `A collection by ${data.owner} · `}
+                {data.kind === 'group' && `A crate by ${data.owner} · `}
                 {data.items.length} {data.items.length === 1 ? 'record' : 'records'}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
               {data.items.map((i) => (
-                <a key={i.releaseId} href={`https://www.discogs.com/release/${i.releaseId}`} target="_blank" rel="noreferrer" className="group relative block">
+                <a key={i.copyId ?? i.releaseId} href={`https://www.discogs.com/release/${i.releaseId}`} target="_blank" rel="noreferrer" className="group relative block">
                   <Cover
                     releaseId={i.releaseId}
                     hasCover={!!i.hasCover}
@@ -79,6 +91,16 @@ export default function Shared() {
                   <div className="mt-2 truncate text-sm font-medium">{i.title}</div>
                   <div className="truncate text-xs text-ink-500">{[i.artist, i.year].filter(Boolean).join(' · ')}</div>
                   <div className="truncate text-xs text-ink-500">{[i.label, i.catno].filter(Boolean).join(' · ')}</div>
+                  {data.kind === 'forsale' && (
+                    <div className="mt-0.5 flex items-center justify-between gap-2 text-xs">
+                      <span className="truncate text-ink-500">
+                        {[i.mediaCondition && `Media ${i.mediaCondition}`, i.sleeveCondition && `Sleeve ${i.sleeveCondition}`].filter(Boolean).join(' · ')}
+                      </span>
+                      <span className="shrink-0 font-medium text-wax">
+                        {i.askingPrice != null && i.priceCurrency ? money(i.askingPrice, i.priceCurrency) : 'Ask for price'}
+                      </span>
+                    </div>
+                  )}
                 </a>
               ))}
             </div>

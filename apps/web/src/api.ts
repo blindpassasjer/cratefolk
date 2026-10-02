@@ -13,6 +13,8 @@ export async function api<T>(path: string, init?: RequestInit & { json?: unknown
     ...rest,
     headers: json === undefined ? rest.headers : { 'Content-Type': 'application/json', ...rest.headers },
     body: json === undefined ? rest.body : JSON.stringify(json),
+  }).catch(() => {
+    throw new ApiError('Could not reach the server. Check your connection and try again.', 0)
   })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new ApiError((data as { error?: string }).error ?? res.statusText, res.status)
@@ -45,12 +47,16 @@ export interface Copy {
   label: string | null
   catno: string | null
   format: string
+  barcode: string | null
   hasCover: number
   mediaCondition: Grade | null
   sleeveCondition: Grade | null
   notes: string | null
   addedAt: string
   collectionIds: number[]
+  forSale: number
+  askingPrice: number | null
+  priceCurrency: string | null
 }
 
 export interface SearchResult {
@@ -91,9 +97,9 @@ export interface ReleaseDetail {
   hasCover: number
 }
 
-export type OwnedCopy = Pick<Copy, 'copyId' | 'mediaCondition' | 'sleeveCondition' | 'notes' | 'addedAt' | 'collectionIds'>
+export type OwnedCopy = Pick<Copy, 'copyId' | 'mediaCondition' | 'sleeveCondition' | 'notes' | 'addedAt' | 'collectionIds' | 'forSale' | 'askingPrice' | 'priceCurrency'>
 
-export type WishItem = Omit<Copy, 'copyId' | 'mediaCondition' | 'sleeveCondition' | 'collectionIds'> & { wishId: number }
+export type WishItem = Omit<Copy, 'copyId' | 'mediaCondition' | 'sleeveCondition' | 'collectionIds' | 'forSale' | 'askingPrice' | 'priceCurrency'> & { wishId: number }
 
 export interface Status {
   owned: Record<number, number>

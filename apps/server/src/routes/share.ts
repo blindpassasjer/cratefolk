@@ -6,7 +6,7 @@ import { requireUser, type AppEnv } from '../auth.js'
 import { db } from '../db.js'
 import { coverPath } from '../releases.js'
 
-type Kind = 'all' | 'group' | 'wishlist'
+type Kind = 'all' | 'group' | 'wishlist' | 'forsale'
 
 // ---- Managing links (signed in) ----------------------------------------------------------
 
@@ -14,7 +14,7 @@ export const shareRoutes = new Hono<AppEnv>()
 shareRoutes.use('*', requireUser)
 
 const targetSchema = z.object({
-  kind: z.enum(['all', 'group', 'wishlist']),
+  kind: z.enum(['all', 'group', 'wishlist', 'forsale']),
   collectionId: z.number().int().positive().optional(),
 })
 
@@ -43,7 +43,7 @@ shareRoutes.post('/', async (c) => {
 
   if (kind === 'group') {
     if (!groupId || !db.prepare('SELECT 1 FROM collections WHERE id = ? AND user_id = ?').get(groupId, userId)) {
-      return c.json({ error: 'Collection not found' }, 404)
+      return c.json({ error: 'Crate not found' }, 404)
     }
   }
   const existing = db
@@ -91,6 +91,18 @@ function itemsFor(share: ShareRow) {
                 WHERE w.user_id = ? ORDER BY r.artist COLLATE NOCASE, r.year, r.title COLLATE NOCASE`)
       .all(share.user_id)
   }
+  if (share.kind === 'forsale') {
+    // One entry per copy, since grade and price differ between copies. Copy notes stay private.
+    return db
+      .prepare(
+        `SELECT ${ITEM_COLUMNS}, 1 AS copies, c.id AS copyId, c.media_condition AS mediaCondition,
+                c.sleeve_condition AS sleeveCondition, c.asking_price AS askingPrice, c.price_currency AS priceCurrency
+         FROM copies c JOIN releases r ON r.id = c.release_id
+         WHERE c.user_id = ? AND c.for_sale = 1
+         ORDER BY r.artist COLLATE NOCASE, r.year, r.title COLLATE NOCASE, c.id`,
+      )
+      .all(share.user_id)
+  }
   // Several copies of one pressing show once, with a count. Notes, grades and prices stay private.
   return db
     .prepare(
@@ -108,6 +120,7 @@ publicShareRoutes.get('/:token', (c) => {
   if (!share) return c.json({ error: 'This link is no longer available' }, 404)
   let title = 'Collection'
   if (share.kind === 'wishlist') title = 'Wishlist'
+  if (share.kind === 'forsale') title = 'For sale'
   if (share.kind === 'group') {
     title = (db.prepare('SELECT name FROM collections WHERE id = ?').get(share.group_id) as { name: string }).name
   }

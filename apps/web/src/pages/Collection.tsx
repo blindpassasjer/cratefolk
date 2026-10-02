@@ -1,25 +1,33 @@
-import { Disc3, Pencil, Plus, Settings2, Trash2 } from 'lucide-react'
+import { Archive, Disc3, Pencil, Plus, Settings2, Tag, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import AddRecord from '../AddRecord'
 import { api, type CollectionGroup, type Copy } from '../api'
+import { money } from '../Market'
 import CollectionPicker from '../CollectionPicker'
 import Cover from '../Cover'
 import ManageCollections from '../ManageCollections'
+import { useToast } from '../notify'
+import SearchBar from '../SearchBar'
+import { matchesQuery } from '../search'
 import ShareExport from '../ShareExport'
 
 export default function Collection() {
   const [params, setParams] = useSearchParams()
   const activeId = Number(params.get('c')) || null
+  const sale = params.get('sale') === '1'
+  const query = params.get('q') ?? ''
 
   const [copies, setCopies] = useState<Copy[] | null>(null)
   const [groups, setGroups] = useState<CollectionGroup[]>([])
   const [totalCount, setTotalCount] = useState<number | null>(null)
+  const [saleCount, setSaleCount] = useState(0)
   const [adding, setAdding] = useState(false)
   const [managing, setManaging] = useState(false)
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const toast = useToast()
 
   const active = groups.find((g) => g.id === activeId) ?? null
 
@@ -29,34 +37,43 @@ export default function Collection() {
 
   const load = useCallback(async () => {
     try {
-      const qs = activeId ? `?collection=${activeId}` : ''
+      const qs = activeId ? `?collection=${activeId}` : sale ? '?forSale=1' : ''
       const [{ copies }] = await Promise.all([api<{ copies: Copy[] }>(`/collection${qs}`), loadGroups()])
       setCopies(copies)
-      if (!activeId) setTotalCount(copies.length)
+      if (!activeId && !sale) setTotalCount(copies.length)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load your collection')
     }
-  }, [activeId, loadGroups])
+  }, [activeId, sale, loadGroups])
 
   useEffect(() => {
     void load()
   }, [load])
 
-  // The "All records" count needs the unfiltered total even while a collection is open.
+  // The "All records" count needs the unfiltered total even while a crate is open.
   useEffect(() => {
     if (activeId) void api<{ copies: Copy[] }>('/collection').then((r) => setTotalCount(r.copies.length))
   }, [activeId, copies])
 
-  function select(id: number | null) {
-    setParams(id ? { c: String(id) } : {})
-  }
+  // The search text survives switching between collections.
+  const withQuery = (p: Record<string, string>) => setParams(query ? { ...p, q: query } : p)
+  const select = (id: number | null) => withQuery(id ? { c: String(id) } : {})
+  const selectSale = () => withQuery({ sale: '1' })
+  const setQuery = (q: string) =>
+    setParams((prev) => {
+      const next = new URLSearchParams(prev)
+      if (q) next.set('q', q)
+      else next.delete('q')
+      return next
+    }, { replace: true })
+
+  const shown = copies?.filter((c) => matchesQuery(c, query)) ?? null
 
   async function run(fn: () => Promise<unknown>) {
-    setError(null)
     try {
       await fn()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong')
+      toast.error(e instanceof Error ? e.message : 'Something went wrong')
     }
   }
 
@@ -69,6 +86,7 @@ export default function Collection() {
       setCreating(false)
       await loadGroups()
       select(collection.id)
+      toast.success(`Created the crate “${collection.name}”`)
     })
   }
 
@@ -81,8 +99,12 @@ export default function Collection() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{active ? active.name : 'Collection'}</h1>
-          {copies && <p className="text-sm text-ink-500">{copies.length} {copies.length === 1 ? 'record' : 'records'}</p>}
+          <h1 className="text-2xl font-semibold tracking-tight">{active ? active.name : sale ? 'For sale' : 'Collection'}</h1>
+          {copies && shown && (
+            <p className="text-sm text-ink-500">
+              {query ? `${shown.length} of ${copies.length}` : copies.length} {copies.length === 1 ? 'record' : 'records'}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {active && (
@@ -96,10 +118,10 @@ export default function Collection() {
             </>
           )}
           <ShareExport
-            key={activeId ?? 'all'}
-            kind={activeId ? 'group' : 'all'}
+            key={activeId ?? (sale ? 'sale' : 'all')}
+            kind={activeId ? 'group' : sale ? 'forsale' : 'all'}
             collectionId={activeId ?? undefined}
-            exportHref={`/api/export/collection.xlsx${activeId ? `?collection=${activeId}` : ''}`}
+            exportHref={`/api/export/collection.xlsx${activeId ? `?collection=${activeId}` : sale ? '?forSale=1' : ''}`}
           />
           <button onClick={() => setAdding(true)} className="flex items-center gap-2 rounded-md bg-wax px-4 py-2 text-sm font-medium text-on-wax hover:bg-wax-hover">
             <Plus className="size-4" /> Add record
@@ -108,12 +130,17 @@ export default function Collection() {
       </div>
 
       <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1">
-        <button onClick={() => select(null)} className={chip(!activeId)}>
+        <button onClick={() => select(null)} className={chip(!activeId && !sale)}>
           All records{totalCount !== null && <span className="ml-1.5 opacity-70">{totalCount}</span>}
         </button>
+        {(saleCount > 0 || sale) && (
+          <button onClick={selectSale} className={`${chip(sale)} flex items-center gap-1.5`}>
+            <Tag className="size-3.5" /> For sale<span className="opacity-70">{saleCount}</span>
+          </button>
+        )}
         {groups.map((g) => (
           <button key={g.id} onClick={() => select(g.id)} className={chip(g.id === activeId)}>
-            {g.name}
+            <Archive className="mr-1.5 -mt-0.5 inline size-3.5 opacity-70" />{g.name}
             <span className="ml-1.5 opacity-70">{g.count}</span>
           </button>
         ))}
@@ -129,7 +156,7 @@ export default function Collection() {
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => e.key === 'Escape' && setCreating(false)}
-              placeholder="Collection name"
+              placeholder="Crate name"
               maxLength={60}
               className="w-44 rounded-full border border-ink-700 bg-ink-900 px-3 py-1 text-sm outline-none focus:border-wax"
             />
@@ -137,33 +164,49 @@ export default function Collection() {
           </form>
         ) : (
           <button onClick={() => setCreating(true)} className="flex shrink-0 items-center gap-1 rounded-full border border-dashed border-ink-700 px-3 py-1 text-sm text-ink-500 hover:border-wax hover:text-ink-100">
-            <Plus className="size-3.5" /> New collection
+            <Plus className="size-3.5" /> New crate
           </button>
         )}
       </div>
 
+      {(copies?.length ?? 0) > 0 && <SearchBar value={query} onChange={setQuery} placeholder="Search artist, title, label, catalog no. or barcode  ( / )" />}
+
       {error && <p className="text-sm text-danger">{error}</p>}
+
+      {copies && copies.length > 0 && shown?.length === 0 && (
+        <p className="py-16 text-center text-sm text-ink-500">
+          No records match “{query}”. <button onClick={() => setQuery('')} className="text-wax hover:underline">Clear search</button>
+        </p>
+      )}
 
       {copies?.length === 0 && (
         <div className="flex flex-col items-center gap-3 py-24 text-center">
           <Disc3 className="size-12 text-ink-700" />
-          <h2 className="text-xl font-semibold">{active ? 'This collection is empty' : 'Your crate is empty'}</h2>
+          <h2 className="text-xl font-semibold">{active ? 'This crate is empty' : 'Your collection is empty'}</h2>
           <p className="max-w-sm text-sm text-ink-500">
             {active
               ? 'Use the folder icon on any record in All records to add it here.'
-              : 'Search Discogs by name, catalog number or barcode to add your first record.'}
+              : sale
+                ? 'Open a record and tick “For sale” on one of your copies.'
+                : 'Search Discogs by name, catalog number or barcode to add your first record.'}
           </p>
         </div>
       )}
 
       <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-        {copies?.map((c) => (
+        {shown?.map((c) => (
           <div key={c.copyId} className="group relative">
             <Link to={`/release/${c.releaseId}`} className="block">
               <Cover releaseId={c.releaseId} hasCover={!!c.hasCover} className="rounded-md shadow-lg shadow-black/40 ring-1 ring-ink-800 transition group-hover:-translate-y-0.5 group-hover:ring-wax/60" />
               <div className="mt-2 truncate text-sm font-medium">{c.title}</div>
               <div className="truncate text-xs text-ink-500">{[c.artist, c.year].filter(Boolean).join(' · ')}</div>
             </Link>
+            {!!c.forSale && (
+              <span className="absolute bottom-[3.1rem] left-2 flex items-center gap-1 rounded-md bg-black/70 px-1.5 py-0.5 text-xs text-white">
+                <Tag className="size-3" />
+                {c.askingPrice != null && c.priceCurrency ? money(c.askingPrice, c.priceCurrency) : 'For sale'}
+              </span>
+            )}
             <div className="absolute right-2 top-2">
               <CollectionPicker copyId={c.copyId} selected={c.collectionIds} groups={groups} onChanged={() => void load()} />
             </div>

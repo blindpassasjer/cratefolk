@@ -1,8 +1,9 @@
 import { Check, Pencil, Trash2, X } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { api, type CollectionGroup } from './api'
+import { useToast } from './notify'
 
-/** Rename and delete the user's collections. Deleting a collection never deletes its records. */
+/** Rename and delete the user's crates. Deleting a crate never deletes its records. */
 export default function ManageCollections({
   groups,
   onClose,
@@ -15,7 +16,7 @@ export default function ManageCollections({
   const [editing, setEditing] = useState<number | null>(null)
   const [draft, setDraft] = useState('')
   const [confirming, setConfirming] = useState<number | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const toast = useToast()
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -24,12 +25,11 @@ export default function ManageCollections({
   }, [onClose])
 
   async function run(fn: () => Promise<unknown>, after: () => void) {
-    setError(null)
     try {
       await fn()
       after()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong')
+      toast.error(e instanceof Error ? e.message : 'Something went wrong')
     }
   }
 
@@ -46,6 +46,7 @@ export default function ManageCollections({
       () => api(`/collections/${g.id}`, { method: 'PATCH', json: { name: draft } }),
       () => {
         setEditing(null)
+        toast.success(`Renamed to “${draft.trim()}”`)
         onChanged()
       },
     )
@@ -56,6 +57,7 @@ export default function ManageCollections({
       () => api(`/collections/${g.id}`, { method: 'DELETE' }),
       () => {
         setConfirming(null)
+        toast.success(`Deleted “${g.name}”. Its records are still in your library.`)
         onChanged(g.id)
       },
     )
@@ -67,14 +69,14 @@ export default function ManageCollections({
     <div className="fixed inset-0 z-20 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm sm:pt-[10vh]" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="w-full max-w-md rounded-xl border border-ink-700 bg-ink-900 shadow-2xl">
         <div className="flex items-center justify-between border-b border-ink-800 px-4 py-3">
-          <h2 className="font-semibold">Manage collections</h2>
+          <h2 className="font-semibold">Manage crates</h2>
           <button onClick={onClose} aria-label="Close" className="text-ink-500 hover:text-ink-100">
             <X className="size-5" />
           </button>
         </div>
 
         <div className="p-2">
-          {groups.length === 0 && <p className="px-3 py-6 text-center text-sm text-ink-500">You have no collections yet.</p>}
+          {groups.length === 0 && <p className="px-3 py-6 text-center text-sm text-ink-500">You have no crates yet.</p>}
           <ul>
             {groups.map((g) => (
               <li key={g.id} className="rounded-lg px-2 py-1.5 hover:bg-ink-800/60">
@@ -86,7 +88,7 @@ export default function ManageCollections({
                       onChange={(e) => setDraft(e.target.value)}
                       onKeyDown={(e) => e.key === 'Escape' && (e.stopPropagation(), setEditing(null))}
                       maxLength={60}
-                      aria-label="Collection name"
+                      aria-label="Crate name"
                       className="min-w-0 flex-1 rounded-md border border-ink-700 bg-ink-950 px-3 py-1.5 text-sm outline-none focus:border-wax"
                     />
                     <button className="rounded-md bg-wax p-2 text-on-wax hover:bg-wax-hover" aria-label="Save name">
@@ -123,7 +125,6 @@ export default function ManageCollections({
               </li>
             ))}
           </ul>
-          {error && <p className="px-3 py-2 text-sm text-danger">{error}</p>}
         </div>
       </div>
     </div>

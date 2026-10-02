@@ -109,6 +109,25 @@ const migrations: string[] = [
   );
   CREATE UNIQUE INDEX shares_target ON shares(user_id, kind, COALESCE(group_id, 0));
   `,
+  `
+  -- A copy can be put up for sale with an asking price (in the owner's currency at the time it was set).
+  ALTER TABLE copies ADD COLUMN for_sale INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE copies ADD COLUMN asking_price REAL;
+  ALTER TABLE copies ADD COLUMN price_currency TEXT;
+
+  -- Widen shares.kind to allow a public 'forsale' link (SQLite can't alter a CHECK constraint).
+  CREATE TABLE shares_new (
+    token      TEXT PRIMARY KEY,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    kind       TEXT NOT NULL CHECK (kind IN ('all', 'group', 'wishlist', 'forsale')),
+    group_id   INTEGER REFERENCES collections(id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  INSERT INTO shares_new SELECT token, user_id, kind, group_id, created_at FROM shares;
+  DROP TABLE shares;
+  ALTER TABLE shares_new RENAME TO shares;
+  CREATE UNIQUE INDEX shares_target ON shares(user_id, kind, COALESCE(group_id, 0));
+  `,
 ]
 
 fs.mkdirSync(config.dataDir, { recursive: true })

@@ -1,6 +1,7 @@
 import { Check, Disc3, Heart, Loader2, Search, X } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { api, type SearchResponse, type SearchResult, type Status } from './api'
+import { useToast } from './notify'
 
 type Mode = 'q' | 'catno' | 'barcode'
 const MODES: Array<{ id: Mode; label: string; placeholder: string }> = [
@@ -24,7 +25,7 @@ export default function AddRecord({
   const [data, setData] = useState<SearchResponse | null>(null)
   const [searched, setSearched] = useState<{ mode: Mode; term: string; allFormats: boolean } | null>(null)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const toast = useToast()
   const [adding, setAdding] = useState<number | null>(null)
   const [status, setStatus] = useState<Status>({ owned: {}, wishlisted: [] })
   const inputRef = useRef<HTMLInputElement>(null)
@@ -38,7 +39,6 @@ export default function AddRecord({
 
   async function run(params: { mode: Mode; term: string; allFormats: boolean }, page: number) {
     setLoading(true)
-    setError(null)
     try {
       const qs = new URLSearchParams({ [params.mode]: params.term, page: String(page) })
       if (params.allFormats) qs.set('allFormats', '1')
@@ -47,7 +47,7 @@ export default function AddRecord({
       setData(res)
       setSearched(params)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Search failed')
+      toast.error(e instanceof Error ? e.message : 'Search failed')
     } finally {
       setLoading(false)
     }
@@ -60,7 +60,6 @@ export default function AddRecord({
 
   async function add(r: SearchResult, target: 'collection' | 'wishlist') {
     setAdding(r.id)
-    setError(null)
     try {
       await api(`/${target}`, { method: 'POST', json: { releaseId: r.id } })
       setStatus((s) =>
@@ -68,9 +67,10 @@ export default function AddRecord({
           ? { owned: { ...s.owned, [r.id]: (s.owned[r.id] ?? 0) + 1 }, wishlisted: s.wishlisted.filter((id) => id !== r.id) }
           : { ...s, wishlisted: [...s.wishlisted, r.id] },
       )
+      toast.success(target === 'collection' ? `Added “${r.title}” to your collection` : `Added “${r.title}” to your wishlist`)
       onAdded()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not add record')
+      toast.error(e instanceof Error ? e.message : 'Could not add record')
     } finally {
       setAdding(null)
     }
@@ -120,7 +120,6 @@ export default function AddRecord({
         </form>
 
         <div className="p-2">
-          {error && <p className="px-2 py-3 text-sm text-danger">{error}</p>}
           {loading && (
             <div className="flex justify-center py-10 text-ink-500">
               <Loader2 className="size-5 animate-spin" />

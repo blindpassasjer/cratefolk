@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import { api, ApiError, type User } from './api'
+import { useToast } from './notify'
 
 interface AuthState {
   user: User | null
@@ -15,6 +16,7 @@ const AuthContext = createContext<AuthState | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const toast = useToast()
 
   const refresh = useCallback(async () => {
     try {
@@ -40,14 +42,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     await api('/auth/logout', { method: 'POST' })
     setUser(null)
-  }, [])
+    toast.info('Signed out')
+  }, [toast])
 
   const setCurrency = useCallback(
     async (currency: string) => {
-      await api('/auth/me', { method: 'PATCH', json: { currency } })
-      await refresh()
+      try {
+        await api('/auth/me', { method: 'PATCH', json: { currency } })
+        await refresh()
+        toast.success(`Prices will now be shown in ${currency}`)
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Could not change the currency')
+      }
     },
-    [refresh],
+    [refresh, toast],
   )
 
   return <AuthContext.Provider value={{ user, loading, login, logout, setCurrency, refresh }}>{children}</AuthContext.Provider>

@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { api, CURRENCIES } from '../api'
 import { useAuth } from '../auth'
+import { useToast } from '../notify'
 
 const input =
   'w-full rounded-md border border-ink-700 bg-ink-900 px-3 py-2 text-sm outline-none transition-colors focus:border-wax disabled:opacity-60'
@@ -28,30 +29,26 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-function Status({ error, ok }: { error: string | null; ok: string | null }) {
-  if (error) return <p className="text-sm text-danger">{error}</p>
-  return ok ? <p className="text-sm text-ink-300">{ok}</p> : null
-}
-
 export default function Account() {
   const { user, refresh, setCurrency } = useAuth()
+  const toast = useToast()
   const isAdmin = user?.role === 'admin'
 
   const [name, setName] = useState(user?.name ?? '')
   const [email, setEmail] = useState(user?.email ?? '')
   const [emailPassword, setEmailPassword] = useState('')
-  const [profile, setProfile] = useState<{ error: string | null; ok: string | null; busy: boolean }>({ error: null, ok: null, busy: false })
+  const [savingProfile, setSavingProfile] = useState(false)
 
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
   const [confirm, setConfirm] = useState('')
-  const [pw, setPw] = useState<{ error: string | null; ok: string | null; busy: boolean }>({ error: null, ok: null, busy: false })
+  const [savingPassword, setSavingPassword] = useState(false)
 
   const emailChanged = !!user && email.trim().toLowerCase() !== user.email
 
   async function saveProfile(e: FormEvent) {
     e.preventDefault()
-    setProfile({ error: null, ok: null, busy: true })
+    setSavingProfile(true)
     try {
       await api('/auth/me', {
         method: 'PATCH',
@@ -59,24 +56,28 @@ export default function Account() {
       })
       await refresh()
       setEmailPassword('')
-      setProfile({ error: null, ok: 'Saved.', busy: false })
+      toast.success(emailChanged ? 'Profile saved. Use your new email next time you sign in.' : 'Profile saved')
     } catch (err) {
-      setProfile({ error: err instanceof Error ? err.message : 'Could not save', ok: null, busy: false })
+      toast.error(err instanceof Error ? err.message : 'Could not save your profile')
+    } finally {
+      setSavingProfile(false)
     }
   }
 
   async function savePassword(e: FormEvent) {
     e.preventDefault()
-    if (next !== confirm) return setPw({ error: "The new passwords don't match", ok: null, busy: false })
-    setPw({ error: null, ok: null, busy: true })
+    if (next !== confirm) return toast.error("The new passwords don't match")
+    setSavingPassword(true)
     try {
       await api('/auth/password', { method: 'POST', json: { currentPassword: current, newPassword: next } })
       setCurrent('')
       setNext('')
       setConfirm('')
-      setPw({ error: null, ok: 'Password changed. Your other devices have been signed out.', busy: false })
+      toast.success('Password changed. Your other devices have been signed out.')
     } catch (err) {
-      setPw({ error: err instanceof Error ? err.message : 'Could not change password', ok: null, busy: false })
+      toast.error(err instanceof Error ? err.message : 'Could not change your password')
+    } finally {
+      setSavingPassword(false)
     }
   }
 
@@ -98,10 +99,9 @@ export default function Account() {
             </Field>
           )}
           <div className="flex items-center gap-4">
-            <button className={button} disabled={profile.busy}>
-              {profile.busy ? 'Saving…' : 'Save changes'}
+            <button className={button} disabled={savingProfile}>
+              {savingProfile ? 'Saving…' : 'Save changes'}
             </button>
-            <Status {...profile} />
           </div>
         </form>
       </Card>
@@ -119,10 +119,9 @@ export default function Account() {
               <input className={input} type="password" required minLength={8} autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
             </Field>
             <div className="flex items-center gap-4">
-              <button className={button} disabled={pw.busy}>
-                {pw.busy ? 'Changing…' : 'Change password'}
+              <button className={button} disabled={savingPassword}>
+                {savingPassword ? 'Changing…' : 'Change password'}
               </button>
-              <Status {...pw} />
             </div>
           </form>
         )}
