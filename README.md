@@ -223,7 +223,7 @@ Pages by [`.github/workflows/deploy-demo.yml`](.github/workflows/deploy-demo.yml
 [`apps/web/src/api.ts`](apps/web/src/api.ts) with a mock
 ([`apps/web/src/demo/mockApi.ts`](apps/web/src/demo/mockApi.ts)) that runs entirely in your browser:
 
-- A catalogue of sample records stands in for Discogs search, and covers are generated artwork.
+- A catalogue of sample records stands in for Discogs search. Covers are loaded from the [Cover Art Archive](https://coverartarchive.org/) when you're online, with generated artwork as the fallback, so no cover images are bundled.
 - Your changes (adding records, grading copies, crates, for-sale prices, share links) are saved to
   `localStorage` on your own device. Nothing is sent to a server.
 - Any email and password signs you in, and Excel export isn't available.
