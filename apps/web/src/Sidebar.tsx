@@ -1,7 +1,8 @@
-import { Archive, BarChart3, Disc3, Heart, Plus, Settings2, Tag, X } from 'lucide-react'
+import { Archive, BarChart3, Disc3, Heart, LogOut, Plus, Settings2, Tag, UserRound, X } from 'lucide-react'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { api, type CollectionGroup } from './api'
+import { useAuth } from './auth'
 import { useCrates } from './crates'
 import { Logo } from './Logo'
 import ManageCollections from './ManageCollections'
@@ -19,8 +20,9 @@ function Count({ children }: { children: ReactNode }) {
   return <span className="ml-auto text-xs tabular-nums text-ink-500">{children}</span>
 }
 
-/** Navigation: Collection with its crates, Wishlist and Stats. A drawer on phones, a fixed panel on wide screens. */
+/** Navigation: Collection with its crates, Wishlist and Stats, plus the account on phones (wide screens have it in the top bar). A drawer on phones, a fixed panel on wide screens. */
 export default function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { user, logout } = useAuth()
   const { groups, totals, refresh, manage } = useCrates()
   const { pathname } = useLocation()
   const [params] = useSearchParams()

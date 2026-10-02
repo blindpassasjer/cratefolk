@@ -34,13 +34,13 @@ export default function Layout() {
               <Link
                 to="/account"
                 title="Account settings"
-                className={`flex min-w-0 items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors sm:px-3 ${pathname === '/account' ? 'bg-ink-800 text-ink-100' : 'text-ink-300 hover:text-ink-100'}`}
+                className={`hidden min-w-0 items-center gap-2 rounded-md px-2 py-2 text-sm lg:flex transition-colors sm:px-3 ${pathname === '/account' ? 'bg-ink-800 text-ink-100' : 'text-ink-300 hover:text-ink-100'}`}
               >
-                <UserRound className="size-4 shrink-0" /> <span className="hidden max-w-40 truncate sm:inline">{user?.name}</span>
+                <UserRound className="size-4 shrink-0" /> <span className="max-w-40 truncate">{user?.name}</span>
               </Link>
               <CoffeeMenu />
               <ThemeToggle />
-              <button onClick={() => void logout()} title="Sign out" aria-label="Sign out" className="rounded-md p-2 text-ink-300 transition-colors hover:text-ink-100">
+              <button onClick={() => void logout()} title="Sign out" aria-label="Sign out" className="hidden rounded-md p-2 text-ink-300 transition-colors hover:text-ink-100 lg:block">
                 <LogOut className="size-4" />
               </button>
             </div>
