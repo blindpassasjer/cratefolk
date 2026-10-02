@@ -107,9 +107,12 @@ export interface ReleaseDetail {
 }
 
 export interface Trivia {
+  /** The album's Wikipedia article, the artist's, or facts worked out from the record's own data. */
+  source: 'album' | 'artist' | 'data'
   facts: string[]
-  title: string
-  url: string
+  /** The Wikipedia article, for the two Wikipedia sources. */
+  title: string | null
+  url: string | null
 }
 
 export type OwnedCopy = Pick<Copy, 'copyId' | 'mediaCondition' | 'sleeveCondition' | 'notes' | 'addedAt' | 'collectionIds' | 'forSale' | 'askingPrice' | 'priceCurrency'>

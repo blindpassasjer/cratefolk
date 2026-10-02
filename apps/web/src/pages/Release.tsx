@@ -192,20 +192,22 @@ export default function Release() {
           {trivia && (
             <aside className="space-y-2 rounded-lg border border-ink-800 bg-ink-900/60 p-4 text-sm">
               <h2 className="flex items-center gap-2 font-medium text-ink-300">
-                <Lightbulb className="size-4 text-wax" /> Did you know?
+                <Lightbulb className="size-4 text-wax" /> {trivia.source === 'artist' ? `About ${r.artist}` : 'Did you know?'}
               </h2>
               <ul className="list-disc space-y-1.5 pl-5 marker:text-ink-700">
                 {trivia.facts.map((f) => (
                   <li key={f}>{f}</li>
                 ))}
               </ul>
-              <p className="text-xs text-ink-500">
-                From{' '}
-                <a href={trivia.url} target="_blank" rel="noreferrer" className="hover:text-wax hover:underline">
-                  “{trivia.title}” on Wikipedia
-                </a>
-                , available under CC BY-SA 4.0.
-              </p>
+              {trivia.url && (
+                <p className="text-xs text-ink-500">
+                  From{' '}
+                  <a href={trivia.url} target="_blank" rel="noreferrer" className="hover:text-wax hover:underline">
+                    “{trivia.title}” on Wikipedia
+                  </a>
+                  , available under CC BY-SA 4.0.
+                </p>
+              )}
             </aside>
           )}
 

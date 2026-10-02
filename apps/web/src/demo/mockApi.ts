@@ -207,7 +207,7 @@ on('GET', '/releases/:id', (m) => {
 })
 
 // The real app looks these up on Wikipedia; the demo has no server, so a few records carry fixed examples.
-const wiki = (page: string, title: string, facts: string[]) => ({ facts, title, url: `https://en.wikipedia.org/wiki/${page}` })
+const wiki = (page: string, title: string, facts: string[]) => ({ source: 'album' as const, facts, title, url: `https://en.wikipedia.org/wiki/${page}` })
 const TRIVIA: Record<number, ReturnType<typeof wiki>> = {
   1001: wiki('Kind_of_Blue', 'Kind of Blue', [
     "The album was recorded at Columbia's 30th Street Studio in New York City in two sessions on March 2 and April 22, 1959.",
@@ -221,7 +221,19 @@ const TRIVIA: Record<number, ReturnType<typeof wiki>> = {
     'In February, the band and co-producers Caillat and Dashut won the 1978 Grammy Award for Album of the Year.',
   ]),
 }
-on('GET', '/releases/:id/trivia', (m) => ({ trivia: TRIVIA[Number(m[1])] ?? null }))
+// Any other record gets facts from its own data, as the real server does when Wikipedia has nothing.
+on('GET', '/releases/:id/trivia', (m) => {
+  const id = Number(m[1])
+  if (TRIVIA[id]) return { trivia: TRIVIA[id] }
+  const r = release(id)
+  const age = new Date().getFullYear() - (r.year ?? NaN)
+  const facts = [
+    r.year ? `Released in ${r.year}, this record is ${age} ${age === 1 ? 'year' : 'years'} old.` : '',
+    r.tracklist.length > 1 ? `It has ${r.tracklist.length} tracks.` : '',
+    r.label && r.country ? `This edition came out on ${r.label} in ${r.country}.` : '',
+  ].filter(Boolean)
+  return { trivia: { source: 'data', facts: facts.length ? facts : [`Nothing more is known about “${r.title}” by ${r.artist} yet.`], title: null, url: null } }
+})
 
 // ---- collections (crates) ----
 const groupRow = (g: { id: number; name: string }) => ({ ...g, count: load().groupCopies.filter((x) => x.groupId === g.id).length })

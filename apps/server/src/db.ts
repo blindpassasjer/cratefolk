@@ -155,6 +155,16 @@ const migrations: string[] = [
     fetched_at INTEGER NOT NULL
   );
   `,
+  `
+  -- Wikipedia facts about an artist, shared by every release of theirs. Same shape as trivia.
+  CREATE TABLE artist_trivia (
+    artist_key TEXT PRIMARY KEY,
+    facts      TEXT,
+    title      TEXT,
+    url        TEXT,
+    fetched_at INTEGER NOT NULL
+  );
+  `,
 ]
 
 fs.mkdirSync(config.dataDir, { recursive: true })

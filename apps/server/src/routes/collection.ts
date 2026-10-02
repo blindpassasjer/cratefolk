@@ -205,7 +205,7 @@ releaseRoutes.get('/:id/cover', (c) => {
 releaseRoutes.get('/:id/trivia', async (c) => {
   const id = Number(c.req.param('id'))
   if (!Number.isInteger(id) || !canAccessRelease(id, c.get('user').id)) return c.json({ error: 'Release not found' }, 404)
-  return c.json({ trivia: await triviaFor(id) })
+  return c.json({ trivia: await triviaFor(id, c.get('user').id) })
 })
 
 releaseRoutes.get('/:id', (c) => {
