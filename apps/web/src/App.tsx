@@ -4,6 +4,8 @@ import Layout from './Layout'
 import AdminUsers from './pages/AdminUsers'
 import Collection from './pages/Collection'
 import Login from './pages/Login'
+import Release from './pages/Release'
+import Wishlist from './pages/Wishlist'
 
 function RequireAuth({ admin = false }: { admin?: boolean }) {
   const { user, loading } = useAuth()
@@ -20,6 +22,8 @@ export default function App() {
       <Route element={<RequireAuth />}>
         <Route element={<Layout />}>
           <Route index element={<Collection />} />
+          <Route path="wishlist" element={<Wishlist />} />
+          <Route path="release/:id" element={<Release />} />
           <Route element={<RequireAuth admin />}>
             <Route path="admin" element={<AdminUsers />} />
           </Route>

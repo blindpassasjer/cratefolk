@@ -1,0 +1,232 @@
+import { config } from './config.js'
+
+const BASE = 'https://api.discogs.com'
+const USER_AGENT = 'WaxCrate/0.0.1 +https://github.com/blindpassasjer/waxcrate'
+
+export class DiscogsError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+  ) {
+    super(message)
+  }
+}
+
+// Discogs allows 60 requests/min with a token and 25 without. Requests run one at a time,
+// spaced out so we stay under that, and 429s are retried after the server's Retry-After.
+const MIN_GAP_MS = config.discogsToken ? 1100 : 2500
+let chain: Promise<unknown> = Promise.resolve()
+let lastStart = 0
+
+function schedule<T>(task: () => Promise<T>): Promise<T> {
+  const run = chain.then(async () => {
+    const wait = lastStart + MIN_GAP_MS - Date.now()
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait))
+    lastStart = Date.now()
+    return task()
+  })
+  chain = run.catch(() => undefined)
+  return run
+}
+
+const headers = (): Record<string, string> => ({
+  'User-Agent': USER_AGENT,
+  ...(config.discogsToken ? { Authorization: `Discogs token=${config.discogsToken}` } : {}),
+})
+
+async function getJson<T>(path: string, params: Record<string, string> = {}): Promise<T> {
+  const url = new URL(BASE + path)
+  for (const [k, v] of Object.entries(params)) if (v) url.searchParams.set(k, v)
+
+  for (let attempt = 0; ; attempt++) {
+    const res = await schedule(() => fetch(url, { headers: headers() }))
+    if (res.status === 429 && attempt < 3) {
+      const retryAfter = Number(res.headers.get('retry-after')) || 5
+      await new Promise((r) => setTimeout(r, retryAfter * 1000))
+      continue
+    }
+    if (res.status === 404) throw new DiscogsError('Not found on Discogs', 404)
+    if (res.status === 401) throw new DiscogsError('Discogs rejected the token', 502)
+    if (!res.ok) throw new DiscogsError(`Discogs returned ${res.status}`, 502)
+    return (await res.json()) as T
+  }
+}
+
+/** Discogs disambiguates duplicate names with a numeric suffix, e.g. "Nirvana (2)". */
+const cleanName = (name: string) => name.replace(/\s\(\d+\)$/, '').trim()
+
+export interface SearchResult {
+  id: number
+  masterId: number | null
+  artist: string
+  title: string
+  year: number | null
+  country: string | null
+  format: string
+  label: string | null
+  catno: string | null
+  barcode: string | null
+  thumb: string | null
+}
+
+export interface SearchResponse {
+  results: SearchResult[]
+  page: number
+  pages: number
+  items: number
+}
+
+interface RawSearch {
+  pagination: { page: number; pages: number; items: number }
+  results: Array<{
+    id: number
+    master_id?: number
+    title: string
+    year?: string
+    country?: string
+    format?: string[]
+    label?: string[]
+    catno?: string
+    barcode?: string[]
+    thumb?: string
+  }>
+}
+
+export interface SearchParams {
+  q?: string
+  catno?: string
+  barcode?: string
+  page?: number
+  allFormats?: boolean
+}
+
+export async function searchReleases(p: SearchParams): Promise<SearchResponse> {
+  const raw = await getJson<RawSearch>('/database/search', {
+    type: 'release',
+    q: p.q ?? '',
+    catno: p.catno ?? '',
+    barcode: p.barcode ?? '',
+    format: p.allFormats ? '' : 'Vinyl',
+    page: String(p.page ?? 1),
+    per_page: '25',
+  })
+  return {
+    page: raw.pagination.page,
+    pages: raw.pagination.pages,
+    items: raw.pagination.items,
+    results: raw.results.map((r) => {
+      // Search titles look like "Artist - Title"
+      const sep = r.title.indexOf(' - ')
+      const [artist, title] = sep === -1 ? ['', r.title] : [r.title.slice(0, sep), r.title.slice(sep + 3)]
+      return {
+        id: r.id,
+        masterId: r.master_id || null,
+        artist: cleanName(artist),
+        title,
+        year: r.year ? Number(r.year) || null : null,
+        country: r.country ?? null,
+        format: (r.format ?? []).join(', '),
+        label: r.label?.[0] ? cleanName(r.label[0]) : null,
+        catno: r.catno && r.catno !== 'none' ? r.catno : null,
+        barcode: r.barcode?.[0] ?? null,
+        thumb: r.thumb || null,
+      }
+    }),
+  }
+}
+
+interface RawRelease {
+  id: number
+  master_id?: number
+  title: string
+  year?: number
+  country?: string
+  artists?: Array<{ name: string; join?: string }>
+  labels?: Array<{ name: string; catno?: string }>
+  formats?: Array<{ name: string; qty?: string; descriptions?: string[]; text?: string }>
+  genres?: string[]
+  styles?: string[]
+  tracklist?: Array<{ position: string; type_: string; title: string; duration: string }>
+  identifiers?: Array<{ type: string; value: string }>
+  images?: Array<{ type: string; uri: string }>
+  notes?: string
+}
+
+export interface ParsedRelease {
+  id: number
+  masterId: number | null
+  title: string
+  artist: string
+  year: number | null
+  country: string | null
+  label: string | null
+  catno: string | null
+  barcode: string | null
+  format: string
+  genres: string[]
+  styles: string[]
+  tracklist: Array<{ position: string; title: string; duration: string }>
+  notes: string | null
+  coverUrl: string | null
+}
+
+export function parseRelease(raw: RawRelease): ParsedRelease {
+  const artists = raw.artists ?? []
+  const artist = artists
+    .map((a, i) => {
+      const join = a.join?.trim()
+      const sep = i === artists.length - 1 || !join ? '' : join === ',' ? ', ' : ` ${join} `
+      return cleanName(a.name) + sep
+    })
+    .join('')
+
+  const format = (raw.formats ?? [])
+    .map((f) => {
+      const qty = Number(f.qty) > 1 ? `${f.qty}×` : ''
+      return [qty + f.name, ...(f.descriptions ?? [])].join(', ')
+    })
+    .join(' + ')
+
+  const label = raw.labels?.[0]
+  const catno = label?.catno && label.catno !== 'none' ? label.catno : null
+  const primary = raw.images?.find((i) => i.type === 'primary') ?? raw.images?.[0]
+
+  return {
+    id: raw.id,
+    masterId: raw.master_id || null,
+    title: raw.title,
+    artist,
+    year: raw.year || null,
+    country: raw.country ?? null,
+    label: label ? cleanName(label.name) : null,
+    catno,
+    barcode: raw.identifiers?.find((i) => i.type === 'Barcode')?.value ?? null,
+    format,
+    genres: raw.genres ?? [],
+    styles: raw.styles ?? [],
+    tracklist: (raw.tracklist ?? [])
+      .filter((t) => t.type_ === 'track' || t.type_ === 'index')
+      .map((t) => ({ position: t.position, title: t.title, duration: t.duration })),
+    notes: raw.notes?.trim() || null,
+    coverUrl: primary?.uri ?? null,
+  }
+}
+
+export async function fetchRelease(id: number): Promise<ParsedRelease> {
+  return parseRelease(await getJson<RawRelease>(`/releases/${id}`))
+}
+
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024
+
+export async function downloadImage(url: string): Promise<Buffer | null> {
+  try {
+    const { hostname, protocol } = new URL(url)
+    if (protocol !== 'https:' || !hostname.endsWith('.discogs.com')) return null
+    const res = await fetch(url, { headers: headers() })
+    if (!res.ok || !res.headers.get('content-type')?.startsWith('image/')) return null
+    const buf = Buffer.from(await res.arrayBuffer())
+    return buf.length <= MAX_IMAGE_BYTES ? buf : null
+  } catch {
+    return null
+  }
+}

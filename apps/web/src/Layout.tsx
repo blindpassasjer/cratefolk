@@ -1,4 +1,4 @@
-import { Disc3, LogOut, Users } from 'lucide-react'
+import { Disc3, Heart, LogOut, Users } from 'lucide-react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from './auth'
 
@@ -28,6 +28,9 @@ export default function Layout() {
           <nav className="flex flex-1 items-center gap-1">
             <NavLink to="/" end className={link}>
               Collection
+            </NavLink>
+            <NavLink to="/wishlist" className={link}>
+              <Heart className="size-4" /> Wishlist
             </NavLink>
             {user?.role === 'admin' && (
               <NavLink to="/admin" className={link}>

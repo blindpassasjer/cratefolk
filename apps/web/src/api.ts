@@ -30,3 +30,70 @@ export interface AdminUser extends User {
   disabled: number
   createdAt: string
 }
+
+export const GRADES = ['M', 'NM', 'VG+', 'VG', 'G+', 'G', 'F', 'P'] as const
+export type Grade = (typeof GRADES)[number]
+
+export interface Copy {
+  copyId: number
+  releaseId: number
+  title: string
+  artist: string
+  year: number | null
+  country: string | null
+  label: string | null
+  catno: string | null
+  format: string
+  hasCover: number
+  mediaCondition: Grade | null
+  sleeveCondition: Grade | null
+  notes: string | null
+  addedAt: string
+}
+
+export interface SearchResult {
+  id: number
+  artist: string
+  title: string
+  year: number | null
+  country: string | null
+  format: string
+  label: string | null
+  catno: string | null
+  barcode: string | null
+  thumb: string | null
+}
+
+export interface SearchResponse {
+  results: SearchResult[]
+  page: number
+  pages: number
+  items: number
+}
+
+export interface ReleaseDetail {
+  id: number
+  masterId: number | null
+  title: string
+  artist: string
+  year: number | null
+  country: string | null
+  label: string | null
+  catno: string | null
+  barcode: string | null
+  format: string
+  genres: string[]
+  styles: string[]
+  tracklist: Array<{ position: string; title: string; duration: string }>
+  notes: string | null
+  hasCover: number
+}
+
+export type OwnedCopy = Pick<Copy, 'copyId' | 'mediaCondition' | 'sleeveCondition' | 'notes' | 'addedAt'>
+
+export type WishItem = Omit<Copy, 'copyId' | 'mediaCondition' | 'sleeveCondition'> & { wishId: number }
+
+export interface Status {
+  owned: Record<number, number>
+  wishlisted: number[]
+}

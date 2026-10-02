@@ -1,0 +1,115 @@
+import { Hono } from 'hono'
+import { z } from 'zod'
+import { requireUser, type AppEnv } from '../auth.js'
+import { db } from '../db.js'
+import { DiscogsError } from '../discogs.js'
+import { ensureRelease } from '../releases.js'
+
+export const wishlistRoutes = new Hono<AppEnv>()
+export const statusRoutes = new Hono<AppEnv>()
+wishlistRoutes.use('*', requireUser)
+statusRoutes.use('*', requireUser)
+
+const grade = z.enum(['M', 'NM', 'VG+', 'VG', 'G+', 'G', 'F', 'P']).nullable()
+
+const ITEM_SELECT = `
+  SELECT w.id AS wishId, w.release_id AS releaseId, w.notes, w.added_at AS addedAt,
+         r.title, r.artist, r.year, r.country, r.label, r.catno, r.format, r.has_cover AS hasCover
+  FROM wishlist w JOIN releases r ON r.id = w.release_id`
+
+wishlistRoutes.get('/', (c) =>
+  c.json({
+    items: db.prepare(`${ITEM_SELECT} WHERE w.user_id = ? ORDER BY w.added_at DESC, w.id DESC`).all(c.get('user').id),
+  }),
+)
+
+const addSchema = z.object({
+  releaseId: z.number().int().positive(),
+  notes: z.string().max(2000).optional(),
+})
+
+// Wishlisting a release that is already on the list is a no-op that returns the existing item.
+wishlistRoutes.post('/', async (c) => {
+  const parsed = addSchema.safeParse(await c.req.json().catch(() => null))
+  if (!parsed.success) return c.json({ error: 'Invalid request' }, 400)
+  const { releaseId, notes } = parsed.data
+  try {
+    await ensureRelease(releaseId)
+  } catch (err) {
+    if (err instanceof DiscogsError) return c.json({ error: err.message }, err.status === 404 ? 404 : 502)
+    throw err
+  }
+  const userId = c.get('user').id
+  const info = db
+    .prepare('INSERT OR IGNORE INTO wishlist (user_id, release_id, notes) VALUES (?, ?, ?)')
+    .run(userId, releaseId, notes ?? null)
+  const item = db.prepare(`${ITEM_SELECT} WHERE w.user_id = ? AND w.release_id = ?`).get(userId, releaseId)
+  return c.json({ item }, info.changes ? 201 : 200)
+})
+
+wishlistRoutes.patch('/:id', async (c) => {
+  const id = Number(c.req.param('id'))
+  const parsed = z.object({ notes: z.string().max(2000).nullable() }).safeParse(await c.req.json().catch(() => null))
+  if (!Number.isInteger(id) || !parsed.success) return c.json({ error: 'Invalid request' }, 400)
+  const res = db
+    .prepare('UPDATE wishlist SET notes = ? WHERE id = ? AND user_id = ?')
+    .run(parsed.data.notes, id, c.get('user').id)
+  if (!res.changes) return c.json({ error: 'Wishlist item not found' }, 404)
+  return c.json({ item: db.prepare(`${ITEM_SELECT} WHERE w.id = ?`).get(id) })
+})
+
+wishlistRoutes.delete('/:id', (c) => {
+  const res = db
+    .prepare('DELETE FROM wishlist WHERE id = ? AND user_id = ?')
+    .run(Number(c.req.param('id')), c.get('user').id)
+  return res.changes ? c.json({ ok: true }) : c.json({ error: 'Wishlist item not found' }, 404)
+})
+
+// "Got it": moves a wishlisted release into the collection as a new copy.
+const acquireSchema = z.object({ mediaCondition: grade.optional(), sleeveCondition: grade.optional() })
+
+wishlistRoutes.post('/:id/acquire', async (c) => {
+  const id = Number(c.req.param('id'))
+  const parsed = acquireSchema.safeParse(await c.req.json().catch(() => ({})))
+  if (!Number.isInteger(id) || !parsed.success) return c.json({ error: 'Invalid request' }, 400)
+  const userId = c.get('user').id
+
+  const copyId = db.transaction(() => {
+    const item = db
+      .prepare('SELECT release_id AS releaseId, notes FROM wishlist WHERE id = ? AND user_id = ?')
+      .get(id, userId) as { releaseId: number; notes: string | null } | undefined
+    if (!item) return null
+    const info = db
+      .prepare(
+        'INSERT INTO copies (user_id, release_id, media_condition, sleeve_condition, notes) VALUES (?, ?, ?, ?, ?)',
+      )
+      .run(userId, item.releaseId, parsed.data.mediaCondition ?? null, parsed.data.sleeveCondition ?? null, item.notes)
+    db.prepare('DELETE FROM wishlist WHERE id = ?').run(id)
+    return Number(info.lastInsertRowid)
+  })()
+
+  if (copyId === null) return c.json({ error: 'Wishlist item not found' }, 404)
+  return c.json({ copyId }, 201)
+})
+
+// For marking search results: which of these releases do I own / have wishlisted?
+statusRoutes.get('/', (c) => {
+  const ids = (c.req.query('ids') ?? '')
+    .split(',')
+    .map(Number)
+    .filter((n) => Number.isInteger(n) && n > 0)
+    .slice(0, 100)
+  if (!ids.length) return c.json({ owned: {}, wishlisted: [] })
+  const marks = ids.map(() => '?').join(',')
+  const userId = c.get('user').id
+  const owned = db
+    .prepare(`SELECT release_id AS id, COUNT(*) AS n FROM copies WHERE user_id = ? AND release_id IN (${marks}) GROUP BY release_id`)
+    .all(userId, ...ids) as Array<{ id: number; n: number }>
+  const wished = db
+    .prepare(`SELECT release_id AS id FROM wishlist WHERE user_id = ? AND release_id IN (${marks})`)
+    .all(userId, ...ids) as Array<{ id: number }>
+  return c.json({
+    owned: Object.fromEntries(owned.map((o) => [o.id, o.n])),
+    wishlisted: wished.map((w) => w.id),
+  })
+})

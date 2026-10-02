@@ -1,10 +1,10 @@
 services:
   waxcrate:
+    image: ghcr.io/blindpassasjer/waxcrate:latest
     build: .
-    # image: ghcr.io/<your-github-user>/waxcrate:latest
     restart: unless-stopped
     ports:
-      - '3000:3000'
+      - '6170:6170'
     environment:
       ADMIN_EMAIL: ${ADMIN_EMAIL:?set ADMIN_EMAIL}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD}

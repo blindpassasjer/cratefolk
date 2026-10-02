@@ -9,6 +9,9 @@ import { config } from './config.js'
 import { migrate } from './db.js'
 import { adminRoutes } from './routes/admin.js'
 import { authRoutes } from './routes/auth.js'
+import { collectionRoutes, releaseRoutes } from './routes/collection.js'
+import { discogsRoutes } from './routes/discogs.js'
+import { statusRoutes, wishlistRoutes } from './routes/wishlist.js'
 
 migrate()
 await ensureAdmin()
@@ -20,6 +23,11 @@ app.use('/api/*', logger())
 app.get('/api/health', (c) => c.json({ ok: true }))
 app.route('/api/auth', authRoutes)
 app.route('/api/admin', adminRoutes)
+app.route('/api/discogs', discogsRoutes)
+app.route('/api/collection', collectionRoutes)
+app.route('/api/releases', releaseRoutes)
+app.route('/api/wishlist', wishlistRoutes)
+app.route('/api/status', statusRoutes)
 app.all('/api/*', (c) => c.json({ error: 'Not found' }, 404))
 
 // In production the server also serves the built web app (SPA fallback to index.html).

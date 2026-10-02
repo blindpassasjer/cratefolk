@@ -10,7 +10,7 @@ function required(name: string): string {
 }
 
 export const config = {
-  port: Number(process.env.PORT ?? 3000),
+  port: Number(process.env.PORT ?? 6170),
   dataDir: path.resolve(process.env.DATA_DIR ?? './data'),
   adminEmail: required('ADMIN_EMAIL').toLowerCase(),
   adminPassword: required('ADMIN_PASSWORD'),

@@ -24,6 +24,50 @@ const migrations: string[] = [
   );
   CREATE INDEX sessions_user_id ON sessions(user_id);
   `,
+  `
+  -- Shared cache of Discogs release metadata, keyed by Discogs release ID.
+  CREATE TABLE releases (
+    id         INTEGER PRIMARY KEY,
+    master_id  INTEGER,
+    title      TEXT NOT NULL,
+    artist     TEXT NOT NULL,
+    year       INTEGER,
+    country    TEXT,
+    label      TEXT,
+    catno      TEXT,
+    barcode    TEXT,
+    format     TEXT,
+    genres     TEXT NOT NULL DEFAULT '[]',
+    styles     TEXT NOT NULL DEFAULT '[]',
+    tracklist  TEXT NOT NULL DEFAULT '[]',
+    notes      TEXT,
+    has_cover  INTEGER NOT NULL DEFAULT 0,
+    fetched_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  -- One row per physical copy a user owns.
+  CREATE TABLE copies (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    release_id      INTEGER NOT NULL REFERENCES releases(id),
+    media_condition TEXT,
+    sleeve_condition TEXT,
+    notes           TEXT,
+    added_at        TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX copies_user_id ON copies(user_id);
+  CREATE INDEX copies_release_id ON copies(release_id);
+  `,
+  `
+  CREATE TABLE wishlist (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    release_id INTEGER NOT NULL REFERENCES releases(id),
+    notes      TEXT,
+    added_at   TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (user_id, release_id)
+  );
+  `,
 ]
 
 fs.mkdirSync(config.dataDir, { recursive: true })
