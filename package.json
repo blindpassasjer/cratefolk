@@ -1,11 +1,15 @@
 {
   "name": "waxcrate",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.2.0",
   "license": "Apache-2.0",
   "type": "module",
-  "workspaces": ["apps/*"],
-  "engines": { "node": ">=20" },
+  "workspaces": [
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "concurrently -n server,web -c cyan,magenta \"npm run dev -w @waxcrate/server\" \"npm run dev -w @waxcrate/web\"",
     "build": "npm run build -w @waxcrate/web && npm run build -w @waxcrate/server",
