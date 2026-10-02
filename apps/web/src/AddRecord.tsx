@@ -148,6 +148,29 @@ export default function AddRecord({
                     </div>
                     <div className="truncate text-xs text-ink-500">{[r.label, r.catno, r.barcode].filter(Boolean).join(' · ')}</div>
                   </div>
+                  {defaultTarget === 'wishlist' ? (
+                    // Opened from the Wishlist page: the only action here is wishlisting.
+                    <div className="shrink-0">
+                      {status.owned[r.id] ? (
+                        <span className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-ink-500">
+                          <Check className="size-3.5" /> You own this
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => void add(r, 'wishlist')}
+                          disabled={adding === r.id || status.wishlisted.includes(r.id)}
+                          className={`flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs disabled:opacity-100 ${status.wishlisted.includes(r.id) ? 'border-wax text-wax' : 'border-ink-700 hover:border-wax'}`}
+                        >
+                          {adding === r.id ? (
+                            <Loader2 className="size-3.5 animate-spin" />
+                          ) : (
+                            <Heart className={`size-3.5 ${status.wishlisted.includes(r.id) ? 'fill-current' : ''}`} />
+                          )}
+                          {status.wishlisted.includes(r.id) ? 'On wishlist' : 'Add to wishlist'}
+                        </button>
+                      )}
+                    </div>
+                  ) : (
                   <div className="flex shrink-0 items-center gap-2">
                     {!status.owned[r.id] && (
                       <button
@@ -169,6 +192,7 @@ export default function AddRecord({
                       {status.owned[r.id] ? `Owned${status.owned[r.id]! > 1 ? ` ×${status.owned[r.id]}` : ''} · add another` : 'Add'}
                     </button>
                   </div>
+                  )}
                 </li>
               ))}
             </ul>
