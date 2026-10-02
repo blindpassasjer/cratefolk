@@ -1,4 +1,5 @@
 import { X } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { SORTS, type Filters, type SortKey } from './search'
 
 type Options = { formats: string[]; decades: string[]; countries: string[] }
@@ -7,7 +8,7 @@ const select = 'rounded-md border border-ink-700 bg-ink-900 py-2 pl-3 pr-2 text-
 
 /** Sort + filter dropdowns. Filters only list values that exist in the current records. */
 export default function FilterBar({
-  sort, onSort, filters, onFilter, options, sorts = SORTS,
+  sort, onSort, filters, onFilter, options, sorts = SORTS, children,
 }: {
   sort: SortKey
   onSort: (s: SortKey) => void
@@ -15,6 +16,8 @@ export default function FilterBar({
   onFilter: (name: keyof Filters, value: string) => void
   options: Options
   sorts?: typeof SORTS
+  /** Extra controls shown next to the sort dropdown. */
+  children?: ReactNode
 }) {
   const active = Object.values(filters).some(Boolean)
   const dropdown = (name: keyof Filters, label: string, values: string[], show = (v: string) => v) =>
@@ -35,12 +38,15 @@ export default function FilterBar({
           <X className="size-3.5" /> Clear filters
         </button>
       )}
-      <label className="ml-auto flex items-center gap-2 text-sm text-ink-500">
+      <div className="ml-auto flex flex-wrap items-center gap-4">
+      {children}
+      <label className="flex items-center gap-2 text-sm text-ink-500">
         Sort
         <select aria-label="Sort records" value={sort} onChange={(e) => onSort(e.target.value as SortKey)} className={select}>
           {sorts.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
         </select>
       </label>
+      </div>
     </div>
   )
 }

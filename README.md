@@ -5,7 +5,7 @@
 <h1 align="center">WaxCrate</h1>
 
 <p align="center">
-  <strong>A self-hosted vinyl collection manager. Your database is the source of truth; Discogs is the metadata source.</strong>
+  <strong>A self-hosted vinyl, CD and cassette collection manager. Your database is the source of truth; Discogs is the metadata source.</strong>
 </p>
 
 <p align="center">

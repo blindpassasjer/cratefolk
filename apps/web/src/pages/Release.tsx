@@ -92,7 +92,10 @@ export default function Release() {
       confirmLabel: 'Remove copy',
       danger: true,
     })
-    if (ok) await act(() => api(`/collection/${copyId}`, { method: 'DELETE' }), 'Copy removed from your collection')
+    if (!ok) return
+    const last = data?.copies.length === 1
+    await act(() => api(`/collection/${copyId}`, { method: 'DELETE' }), 'Copy removed from your collection')
+    if (last) navigate('/', { replace: true })
   }
 
   async function deleteRecord() {

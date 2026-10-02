@@ -1,4 +1,4 @@
-import { Disc3, Pencil, Plus, Tag, Trash2 } from 'lucide-react'
+import { Disc3, Image, Pencil, Plus, Tag, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import AddRecord from '../AddRecord'
@@ -13,6 +13,21 @@ import { useProgressive } from '../useProgressive'
 import { filterOptions, matchesFilters, matchesQuery, SORTS, sortItems, type Filters, type SortKey } from '../search'
 import ShareExport from '../ShareExport'
 
+const SIZE_KEY = 'waxcrate-cover-size'
+const SIZE_MIN = 110
+const SIZE_MAX = 340
+const SIZE_DEFAULT = 190
+
+function loadSize() {
+  try {
+    const n = Number(localStorage.getItem(SIZE_KEY))
+    if (n >= SIZE_MIN && n <= SIZE_MAX) return n
+  } catch {
+    /* storage unavailable: fall back to the default */
+  }
+  return SIZE_DEFAULT
+}
+
 export default function Collection() {
   const [params, setParams] = useSearchParams()
   const activeId = Number(params.get('c')) || null
@@ -24,6 +39,7 @@ export default function Collection() {
 
   const [copies, setCopies] = useState<Copy[] | null>(null)
   const [adding, setAdding] = useState(false)
+  const [coverSize, setCoverSize] = useState(loadSize)
   const [error, setError] = useState<string | null>(null)
   const { groups, refresh, manage } = useCrates()
 
@@ -56,6 +72,14 @@ export default function Collection() {
       return next
     }, { replace: true })
   const setQuery = (q: string) => setParam('q', q)
+  const resize = (n: number) => {
+    setCoverSize(n)
+    try {
+      localStorage.setItem(SIZE_KEY, String(n))
+    } catch {
+      /* the size just won't persist */
+    }
+  }
 
   const filtering = !!query || Object.values(filters).some(Boolean)
   const shown = copies ? sortItems(copies.filter((c) => matchesQuery(c, query) && matchesFilters(c, filters)), sort) : null
@@ -99,7 +123,22 @@ export default function Collection() {
       {(copies?.length ?? 0) > 0 && (
         <div className="space-y-3">
           <SearchBar value={query} onChange={setQuery} placeholder="Search artist, title, label, catalog no. or barcode  ( / )" />
-          <FilterBar sort={sort} onSort={(s) => setParam('sort', s === 'added' ? '' : s)} filters={filters} onFilter={setParam} options={options} />
+          <FilterBar sort={sort} onSort={(s) => setParam('sort', s === 'added' ? '' : s)} filters={filters} onFilter={setParam} options={options}>
+            <label className="flex items-center gap-2 text-sm text-ink-500" title="Cover size">
+              <Image className="size-4" aria-hidden="true" />
+              <input
+                type="range"
+                aria-label="Cover size"
+                min={SIZE_MIN}
+                max={SIZE_MAX}
+                step={10}
+                value={coverSize}
+                onChange={(e) => resize(Number(e.target.value))}
+                onDoubleClick={() => resize(SIZE_DEFAULT)}
+                className="w-28 accent-wax"
+              />
+            </label>
+          </FilterBar>
         </div>
       )}
 
@@ -131,7 +170,7 @@ export default function Collection() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+      <div className="grid gap-5" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(min(${coverSize}px, 100%), 1fr))` }}>
         {visible?.map((c) => (
           <div key={c.copyId} className="group relative">
             <Link to={`/release/${c.releaseId}`} className="block">
