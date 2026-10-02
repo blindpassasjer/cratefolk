@@ -213,7 +213,10 @@ const group = (id: string | undefined) => load().groups.find((g) => g.id === Num
 const clash = (name: string, except?: number) =>
   load().groups.some((g) => g.id !== except && g.name.toLowerCase() === name.toLowerCase()) && fail('You already have a crate with that name', 409)
 
-on('GET', '/collections', () => ({ collections: [...load().groups].sort(byName).map(groupRow) }))
+on('GET', '/collections', () => ({
+  collections: [...load().groups].sort(byName).map(groupRow),
+  totals: { records: load().copies.length, forSale: load().copies.filter((c) => c.forSale).length },
+}))
 on('POST', '/collections', (_m, _q, b) => {
   const name = cleanName(b)
   clash(name)

@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api'
-import { Logo } from '../Layout'
+import { Logo } from '../Logo'
 import { useToast } from '../notify'
 import { ThemeToggle } from '../theme'
 

@@ -117,6 +117,11 @@ export interface Status {
 
 export const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'MXN', 'BRL', 'NZD', 'SEK', 'DKK', 'ZAR']
 
+export interface CollectionTotals {
+  records: number
+  forSale: number
+}
+
 export interface CollectionGroup {
   id: number
   name: string

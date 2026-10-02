@@ -3,7 +3,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../auth'
 import Market, { money } from '../Market'
-import { api, GRADES, type CollectionGroup, type Grade, type OwnedCopy, type ReleaseDetail } from '../api'
+import { api, GRADES, type Grade, type OwnedCopy, type ReleaseDetail } from '../api'
+import { useCrates } from '../crates'
 import CollectionPicker from '../CollectionPicker'
 import ManualRecord from '../ManualRecord'
 import { useDialog, useToast } from '../notify'
@@ -44,7 +45,7 @@ export default function Release() {
   const { user } = useAuth()
   const [data, setData] = useState<{ release: ReleaseDetail; copies: OwnedCopy[]; wishlisted: { id: number } | null } | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [groups, setGroups] = useState<CollectionGroup[]>([])
+  const { groups, refresh } = useCrates()
   const [editing, setEditing] = useState(false)
   const toast = useToast()
   const { confirm } = useDialog()
@@ -52,13 +53,12 @@ export default function Release() {
 
   const load = useCallback(async () => {
     try {
-      const [detail, g] = await Promise.all([api<never>(`/releases/${id}`), api<{ collections: CollectionGroup[] }>('/collections')])
+      const [detail] = await Promise.all([api<never>(`/releases/${id}`), refresh()])
       setData(detail)
-      setGroups(g.collections)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load release')
     }
-  }, [id])
+  }, [id, refresh])
 
   useEffect(() => {
     void load()

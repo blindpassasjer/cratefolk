@@ -13,9 +13,14 @@ const GROUP_SELECT = `
 
 const nameSchema = z.object({ name: z.string().trim().min(1).max(60) })
 
-groupRoutes.get('/', (c) =>
-  c.json({ collections: db.prepare(`${GROUP_SELECT} WHERE g.user_id = ? ORDER BY g.name`).all(c.get('user').id) }),
-)
+// `totals` are the counts for the "All records" and "For sale" entries next to the crates in the sidebar.
+groupRoutes.get('/', (c) => {
+  const userId = c.get('user').id
+  const totals = db
+    .prepare('SELECT COUNT(*) AS records, COALESCE(SUM(for_sale), 0) AS forSale FROM copies WHERE user_id = ?')
+    .get(userId)
+  return c.json({ collections: db.prepare(`${GROUP_SELECT} WHERE g.user_id = ? ORDER BY g.name`).all(userId), totals })
+})
 
 groupRoutes.post('/', async (c) => {
   const parsed = nameSchema.safeParse(await c.req.json().catch(() => null))

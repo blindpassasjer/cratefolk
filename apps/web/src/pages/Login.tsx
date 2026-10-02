@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { IS_DEMO } from '../api'
 import { useAuth } from '../auth'
-import { Logo } from '../Layout'
+import { Logo } from '../Logo'
 import { useToast } from '../notify'
 import { ThemeToggle } from '../theme'
 

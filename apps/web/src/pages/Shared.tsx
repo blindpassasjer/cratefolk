@@ -7,7 +7,7 @@ import SearchBar from '../SearchBar'
 import { filterOptions, matchesFilters, matchesQuery, SORTS, sortItems, type Filters, type SortKey } from '../search'
 import { useProgressive } from '../useProgressive'
 import { money } from '../Market'
-import { Logo } from '../Layout'
+import { Logo } from '../Logo'
 import { ThemeToggle } from '../theme'
 
 interface SharedItem {

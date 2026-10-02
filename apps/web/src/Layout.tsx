@@ -1,78 +1,52 @@
-import { BarChart3, Heart, LogOut, UserRound } from 'lucide-react'
-import { Link, NavLink, Outlet } from 'react-router-dom'
+import { Menu } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Link, Outlet, useLocation } from 'react-router-dom'
 import { IS_DEMO } from './api'
-import { useAuth } from './auth'
+import { CratesProvider } from './crates'
 import { resetDemo } from './demo/mockApi'
-import CoffeeMenu from './CoffeeMenu'
-import { ThemeToggle } from './theme'
-
-export function Logo() {
-  return (
-    <span className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-      <img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" className="size-8" />
-      <span className="hidden sm:inline">WaxCrate</span>
-    </span>
-  )
-}
+import { Logo } from './Logo'
+import Sidebar, { CrateManager } from './Sidebar'
 
 export default function Layout() {
-  const { user, logout } = useAuth()
-  const link = ({ isActive }: { isActive: boolean }) =>
-    `flex items-center gap-2 rounded-md px-2.5 py-2 text-sm transition-colors sm:px-3 ${
-      isActive ? 'bg-ink-800 text-ink-100' : 'text-ink-300 hover:text-ink-100'
-    }`
+  const [open, setOpen] = useState(false)
+  const { pathname } = useLocation()
+
+  // Choosing a destination closes the phone drawer.
+  useEffect(() => setOpen(false), [pathname])
 
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-10 border-b border-ink-800 bg-ink-950/80 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-7xl items-center gap-2 px-4 sm:gap-6">
-          <Link to="/">
-            <Logo />
-          </Link>
-          <nav className="flex min-w-0 flex-1 items-center gap-0.5 sm:gap-1">
-            <NavLink to="/" end className={link}>
-              Collection
-            </NavLink>
-            <NavLink to="/wishlist" className={link} title="Wishlist">
-              <Heart className="size-4" /> <span className="hidden sm:inline">Wishlist</span>
-            </NavLink>
-            <NavLink to="/stats" className={link} title="Stats">
-              <BarChart3 className="size-4" /> <span className="hidden sm:inline">Stats</span>
-            </NavLink>
-          </nav>
-          <NavLink to="/account" className={link} title="Account settings">
-            <UserRound className="size-4" />
-            <span className="hidden max-w-32 truncate sm:inline">{user?.name}</span>
-          </NavLink>
-          <CoffeeMenu />
-          <ThemeToggle />
-          <button
-            onClick={() => void logout()}
-            title="Sign out"
-            aria-label="Sign out"
-            className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-ink-300 hover:text-ink-100 sm:px-3"
-          >
-            <LogOut className="size-4" /> <span className="hidden sm:inline">Sign out</span>
-          </button>
+    <CratesProvider>
+      <div className="min-h-screen lg:flex">
+        <Sidebar open={open} onClose={() => setOpen(false)} />
+        <div className="min-w-0 flex-1">
+          <header className="sticky top-0 z-10 flex h-14 items-center gap-3 border-b border-ink-800 bg-ink-950/80 px-4 backdrop-blur lg:hidden">
+            <button onClick={() => setOpen(true)} aria-label="Open menu" aria-expanded={open} className="-ml-1.5 rounded-md p-1.5 text-ink-300 hover:text-ink-100">
+              <Menu className="size-5" />
+            </button>
+            <Link to="/">
+              <Logo />
+            </Link>
+          </header>
+          {IS_DEMO && (
+            <div className="border-b border-ink-800 bg-ink-900 px-4 py-2 text-center text-xs text-ink-300">
+              Demo with sample records. Everything stays in your browser.{' '}
+              <button
+                onClick={() => {
+                  resetDemo()
+                  window.location.reload()
+                }}
+                className="text-wax hover:underline"
+              >
+                Reset demo data
+              </button>
+            </div>
+          )}
+          <main className="mx-auto max-w-7xl px-4 py-6 sm:py-8">
+            <Outlet />
+          </main>
         </div>
-      </header>
-      {IS_DEMO && (
-        <div className="border-b border-ink-800 bg-ink-900 px-4 py-2 text-center text-xs text-ink-300">
-          Demo with sample records. Everything stays in your browser.{' '}
-          <button
-            onClick={() => {
-              resetDemo()
-              window.location.reload()
-            }}
-            className="text-wax hover:underline"
-          >
-            Reset demo data
-          </button>
-        </div>
-      )}
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:py-8">
-        <Outlet />
-      </main>
-    </div>
+      </div>
+      <CrateManager />
+    </CratesProvider>
   )
 }
