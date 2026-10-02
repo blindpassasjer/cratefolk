@@ -63,8 +63,8 @@ export default function AdminUsers() {
   const action = 'text-ink-300 hover:text-ink-100'
 
   return (
-    <div className="space-y-8">
-      <h1 className="text-2xl font-semibold tracking-tight">Users</h1>
+    <section className="space-y-4">
+      <h2 className="text-xl font-semibold tracking-tight">Users</h2>
 
       <form onSubmit={create} className="grid gap-3 rounded-xl border border-ink-800 bg-ink-900/60 p-4 sm:grid-cols-[1fr_1fr_1fr_auto]">
         <input className={input} placeholder="Name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -112,6 +112,6 @@ export default function AdminUsers() {
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
   )
 }

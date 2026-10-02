@@ -33,7 +33,6 @@ export default function CoffeeMenu() {
         className={`flex items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors hover:text-ink-100 sm:px-3 ${open ? 'text-ink-100' : 'text-ink-300'}`}
       >
         <Coffee className="size-4" />
-        <span className="hidden lg:inline">Buy me a coffee</span>
       </button>
 
       {open && (

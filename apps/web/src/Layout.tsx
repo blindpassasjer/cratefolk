@@ -1,4 +1,4 @@
-import { Heart, LogOut, UserRound, Users } from 'lucide-react'
+import { Heart, LogOut, UserRound } from 'lucide-react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { IS_DEMO } from './api'
 import { useAuth } from './auth'
@@ -36,11 +36,6 @@ export default function Layout() {
             <NavLink to="/wishlist" className={link}>
               <Heart className="size-4" /> Wishlist
             </NavLink>
-            {user?.role === 'admin' && (
-              <NavLink to="/admin" className={link}>
-                <Users className="size-4" /> <span className="hidden sm:inline">Users</span>
-              </NavLink>
-            )}
           </nav>
           <NavLink to="/account" className={link} title="Account settings">
             <UserRound className="size-4" />

@@ -2,6 +2,7 @@ import { useState, type FormEvent, type ReactNode } from 'react'
 import { api, CURRENCIES } from '../api'
 import { useAuth } from '../auth'
 import { useToast } from '../notify'
+import AdminUsers from './AdminUsers'
 
 const input =
   'w-full rounded-md border border-ink-700 bg-ink-900 px-3 py-2 text-sm outline-none transition-colors focus:border-wax disabled:opacity-60'
@@ -82,60 +83,63 @@ export default function Account() {
   }
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
+    <div className="space-y-10">
+      <div className="mx-auto max-w-xl space-y-6">
+        <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
 
-      <Card title="Profile" hint={isAdmin ? 'The admin email is set with ADMIN_EMAIL in your environment, so only the name can be changed here.' : undefined}>
-        <form onSubmit={saveProfile} className="space-y-4">
-          <Field label="Name">
-            <input className={input} required maxLength={80} value={name} onChange={(e) => setName(e.target.value)} />
-          </Field>
-          <Field label="Email address">
-            <input className={input} type="email" required disabled={isAdmin} autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </Field>
-          {emailChanged && (
-            <Field label="Current password (needed to change your email)">
-              <input className={input} type="password" required autoComplete="current-password" value={emailPassword} onChange={(e) => setEmailPassword(e.target.value)} />
+        <Card title="Profile" hint={isAdmin ? 'The admin email is set with ADMIN_EMAIL in your environment, so only the name can be changed here.' : undefined}>
+          <form onSubmit={saveProfile} className="space-y-4">
+            <Field label="Name">
+              <input className={input} required maxLength={80} value={name} onChange={(e) => setName(e.target.value)} />
             </Field>
-          )}
-          <div className="flex items-center gap-4">
-            <button className={button} disabled={savingProfile}>
-              {savingProfile ? 'Saving…' : 'Save changes'}
-            </button>
-          </div>
-        </form>
-      </Card>
-
-      <Card title="Password" hint={isAdmin ? 'The admin password is set with ADMIN_PASSWORD in your environment. Change it there and restart.' : 'Changing it signs you out of your other devices.'}>
-        {!isAdmin && (
-          <form onSubmit={savePassword} className="space-y-4">
-            <Field label="Current password">
-              <input className={input} type="password" required autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} />
+            <Field label="Email address">
+              <input className={input} type="email" required disabled={isAdmin} autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
             </Field>
-            <Field label="New password (8+ characters)">
-              <input className={input} type="password" required minLength={8} autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} />
-            </Field>
-            <Field label="Repeat new password">
-              <input className={input} type="password" required minLength={8} autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
-            </Field>
+            {emailChanged && (
+              <Field label="Current password (needed to change your email)">
+                <input className={input} type="password" required autoComplete="current-password" value={emailPassword} onChange={(e) => setEmailPassword(e.target.value)} />
+              </Field>
+            )}
             <div className="flex items-center gap-4">
-              <button className={button} disabled={savingPassword}>
-                {savingPassword ? 'Changing…' : 'Change password'}
+              <button className={button} disabled={savingProfile}>
+                {savingProfile ? 'Saving…' : 'Save changes'}
               </button>
             </div>
           </form>
-        )}
-      </Card>
+        </Card>
 
-      <Card title="Preferences" hint="Marketplace prices on your wishlist are shown in this currency.">
-        <Field label="Currency">
-          <select className={input} value={user?.currency ?? 'USD'} onChange={(e) => void setCurrency(e.target.value)}>
-            {CURRENCIES.map((c) => (
-              <option key={c}>{c}</option>
-            ))}
-          </select>
-        </Field>
-      </Card>
+        <Card title="Password" hint={isAdmin ? 'The admin password is set with ADMIN_PASSWORD in your environment. Change it there and restart.' : 'Changing it signs you out of your other devices.'}>
+          {!isAdmin && (
+            <form onSubmit={savePassword} className="space-y-4">
+              <Field label="Current password">
+                <input className={input} type="password" required autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} />
+              </Field>
+              <Field label="New password (8+ characters)">
+                <input className={input} type="password" required minLength={8} autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} />
+              </Field>
+              <Field label="Repeat new password">
+                <input className={input} type="password" required minLength={8} autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+              </Field>
+              <div className="flex items-center gap-4">
+                <button className={button} disabled={savingPassword}>
+                  {savingPassword ? 'Changing…' : 'Change password'}
+                </button>
+              </div>
+            </form>
+          )}
+        </Card>
+
+        <Card title="Preferences" hint="Marketplace prices on your wishlist are shown in this currency.">
+          <Field label="Currency">
+            <select className={input} value={user?.currency ?? 'USD'} onChange={(e) => void setCurrency(e.target.value)}>
+              {CURRENCIES.map((c) => (
+                <option key={c}>{c}</option>
+              ))}
+            </select>
+          </Field>
+        </Card>
+      </div>
+      {isAdmin && <AdminUsers />}
     </div>
   )
 }

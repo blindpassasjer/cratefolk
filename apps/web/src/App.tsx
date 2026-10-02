@@ -2,18 +2,16 @@ import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { useAuth } from './auth'
 import Layout from './Layout'
 import Account from './pages/Account'
-import AdminUsers from './pages/AdminUsers'
 import Collection from './pages/Collection'
 import Login from './pages/Login'
 import Release from './pages/Release'
 import Shared from './pages/Shared'
 import Wishlist from './pages/Wishlist'
 
-function RequireAuth({ admin = false }: { admin?: boolean }) {
+function RequireAuth() {
   const { user, loading } = useAuth()
   if (loading) return null
   if (!user) return <Navigate to="/login" replace />
-  if (admin && user.role !== 'admin') return <Navigate to="/" replace />
   return <Outlet />
 }
 
@@ -28,9 +26,7 @@ export default function App() {
           <Route path="wishlist" element={<Wishlist />} />
           <Route path="account" element={<Account />} />
           <Route path="release/:id" element={<Release />} />
-          <Route element={<RequireAuth admin />}>
-            <Route path="admin" element={<AdminUsers />} />
-          </Route>
+          <Route path="admin" element={<Navigate to="/account" replace />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
