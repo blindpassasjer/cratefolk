@@ -9,7 +9,7 @@ import { ThemeToggle } from '../theme'
 
 export default function Login() {
   const { user, loading, login } = useAuth()
-  const [email, setEmail] = useState(IS_DEMO ? 'demo@waxcrate.app' : '')
+  const [email, setEmail] = useState(IS_DEMO ? 'demo@example.com' : '')
   const [password, setPassword] = useState(IS_DEMO ? 'demo' : '')
   const toast = useToast()
   const [busy, setBusy] = useState(false)

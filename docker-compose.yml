@@ -1,6 +1,6 @@
 services:
-  waxcrate:
-    image: ghcr.io/blindpassasjer/waxcrate:latest
+  cratelog:
+    image: ghcr.io/blindpassasjer/cratelog:latest
     build: .
     restart: unless-stopped
     ports:

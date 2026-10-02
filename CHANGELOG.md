@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0 (2026-10-03)
+
+### Changed
+- **WaxCrate is now Cratelog.** The name, logo text, page titles, installable app name, Excel export file names and the demo all use the new name. The Docker image moves to `ghcr.io/blindpassasjer/cratelog` and the demo to `/cratelog/`. The old `waxcrate` image no longer receives updates.
+
+### Upgrading
+Update the image name in your `docker-compose.yml` to `ghcr.io/blindpassasjer/cratelog:latest` (or `git pull`), then run `docker compose pull && docker compose up -d --remove-orphans`. Your `data/` folder and `.env` are unchanged. On first start `data/waxcrate.db` is renamed to `data/cratelog.db`, and signed-in sessions, the theme and the cover size carry over. Back up `data/` first: older versions can't find the renamed database. See the README for details.
+
 ## 0.3.4 (2026-10-03)
 
 ### Changed
@@ -16,7 +24,7 @@ A new `artist_trivia` table is created automatically on the first start. Looking
 - **Sidebar navigation.** All records, For sale, your crates, Wishlist and Stats live in a sidebar (a drawer on phones). Crates can be created and managed from it.
 - **Edit and delete hand-added records**, with a warning when you add a record that is already in your collection.
 - **Password reset links.** An admin can create a one-time link (valid for 24 hours) for a user who forgot their password.
-- **Installable app.** A web app manifest, icons and a service worker let you add WaxCrate to your home screen.
+- **Installable app.** A web app manifest, icons and a service worker let you add Cratelog to your home screen.
 - **Cover size slider** on the collection, remembered in your browser.
 - **Format badges** on covers for CDs, cassettes and video releases.
 - **Clear button** in the Add record search.
@@ -30,7 +38,7 @@ A new `artist_trivia` table is created automatically on the first start. Looking
 - The header and page headers fit better on phones.
 - Removing the last copy of a record returns you to the collection. A hand-added record is deleted along with its last copy, after a confirmation, so it can't be left unreachable.
 - The Docker image is also published as `:latest` on every push to `main`. The build is faster and stricter: a native build stage, Node 22, a health check and image tags with the commit SHA.
-- The README describes WaxCrate as a vinyl, CD and cassette manager.
+- The README describes Cratelog as a vinyl, CD and cassette manager.
 
 ### Fixed
 - Changing `ADMIN_EMAIL` no longer leaves the previous admin account with the admin role. Any other admin is demoted to a regular user on start.

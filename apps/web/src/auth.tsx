@@ -41,8 +41,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const onUnauthorized = () => setUser(null)
-    window.addEventListener('waxcrate:unauthorized', onUnauthorized)
-    return () => window.removeEventListener('waxcrate:unauthorized', onUnauthorized)
+    window.addEventListener('cratelog:unauthorized', onUnauthorized)
+    return () => window.removeEventListener('cratelog:unauthorized', onUnauthorized)
   }, [])
 
   const logout = useCallback(async () => {

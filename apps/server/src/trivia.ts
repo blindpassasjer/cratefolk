@@ -1,7 +1,7 @@
 import { db } from './db.js'
 
 const API = 'https://en.wikipedia.org/w/api.php'
-const USER_AGENT = 'WaxCrate/0.3 (https://github.com/blindpassasjer/waxcrate)'
+const USER_AGENT = 'Cratelog/0.3 (https://github.com/blindpassasjer/cratelog)'
 const TIMEOUT_MS = 10_000
 const FOUND_TTL_MS = 90 * 86_400_000
 const MISSING_TTL_MS = 14 * 86_400_000

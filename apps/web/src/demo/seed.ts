@@ -153,7 +153,7 @@ export function seedState(): DemoState {
   return {
     nextId: 100,
     signedIn: true,
-    me: { name: 'Demo User', email: 'demo@waxcrate.app', currency: 'USD' },
+    me: { name: 'Demo User', email: 'demo@example.com', currency: 'USD' },
     copies: [
       copy(1, 1001, 'NM', 'VG+', 90),
       copy(2, 1001, 'VG', 'VG', 40, 25),
@@ -185,7 +185,7 @@ export function seedState(): DemoState {
     ],
     shares: [],
     users: [
-      { id: 1, email: 'demo@waxcrate.app', name: 'Demo User', role: 'admin', currency: 'USD', disabled: 0, createdAt: daysAgo(120) },
+      { id: 1, email: 'demo@example.com', name: 'Demo User', role: 'admin', currency: 'USD', disabled: 0, createdAt: daysAgo(120) },
       { id: 2, email: 'sam@example.com', name: 'Sam', role: 'user', currency: 'EUR', disabled: 0, createdAt: daysAgo(30) },
     ],
   }

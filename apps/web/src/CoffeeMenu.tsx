@@ -41,7 +41,7 @@ export default function CoffeeMenu() {
             <img src={`${import.meta.env.BASE_URL}developer.jpg`} alt="" aria-hidden="true" className="size-10 rounded-full border-2 border-ink-700 object-cover" />
             <div>
               <h2 className="text-sm font-semibold">Buy me a coffee</h2>
-              <p className="text-xs text-ink-500">Support keeps WaxCrate running</p>
+              <p className="text-xs text-ink-500">Support keeps Cratelog running</p>
             </div>
           </div>
           <div className="flex flex-col gap-2 p-3">

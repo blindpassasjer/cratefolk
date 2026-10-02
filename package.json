@@ -1,7 +1,7 @@
 {
-  "name": "waxcrate",
+  "name": "cratelog",
   "private": true,
-  "version": "0.3.4",
+  "version": "0.4.0",
   "license": "Apache-2.0",
   "type": "module",
   "workspaces": [
@@ -11,12 +11,12 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "concurrently -n server,web -c cyan,magenta \"npm run dev -w @waxcrate/server\" \"npm run dev -w @waxcrate/web\"",
-    "build": "npm run build -w @waxcrate/web && npm run build -w @waxcrate/server",
-    "build:demo": "VITE_DEMO=true npm run build -w @waxcrate/web",
-    "dev:demo": "VITE_DEMO=true npm run dev -w @waxcrate/web",
-    "start": "npm run start -w @waxcrate/server",
-    "typecheck": "npm run typecheck -w @waxcrate/server && npm run typecheck -w @waxcrate/web"
+    "dev": "concurrently -n server,web -c cyan,magenta \"npm run dev -w @cratelog/server\" \"npm run dev -w @cratelog/web\"",
+    "build": "npm run build -w @cratelog/web && npm run build -w @cratelog/server",
+    "build:demo": "VITE_DEMO=true npm run build -w @cratelog/web",
+    "dev:demo": "VITE_DEMO=true npm run dev -w @cratelog/web",
+    "start": "npm run start -w @cratelog/server",
+    "typecheck": "npm run typecheck -w @cratelog/server && npm run typecheck -w @cratelog/web"
   },
   "devDependencies": {
     "concurrently": "^9.0.0"

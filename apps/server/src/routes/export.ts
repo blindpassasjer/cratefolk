@@ -20,7 +20,7 @@ interface Column {
 
 async function sheet(name: string, columns: Column[], rows: Array<Record<string, unknown>>): Promise<ArrayBuffer> {
   const wb = new ExcelJS.Workbook()
-  wb.creator = 'WaxCrate'
+  wb.creator = 'Cratelog'
   const ws = wb.addWorksheet(name)
   ws.columns = columns
   ws.addRows(rows)
@@ -33,7 +33,7 @@ async function sheet(name: string, columns: Column[], rows: Array<Record<string,
 const download = (c: { body: (d: ArrayBuffer, s: 200, h: Record<string, string>) => Response }, data: ArrayBuffer, name: string) =>
   c.body(data, 200, {
     'Content-Type': XLSX,
-    'Content-Disposition': `attachment; filename="waxcrate-${name}-${new Date().toISOString().slice(0, 10)}.xlsx"`,
+    'Content-Disposition': `attachment; filename="cratelog-${name}-${new Date().toISOString().slice(0, 10)}.xlsx"`,
     'Cache-Control': 'no-store',
   })
 

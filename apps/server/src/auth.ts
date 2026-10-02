@@ -11,7 +11,10 @@ const scrypt = promisify(crypto.scrypt) as (
   keylen: number,
 ) => Promise<Buffer>
 
-const COOKIE = 'waxcrate_session'
+const COOKIE = 'cratelog_session'
+// Sessions started before the 0.4.0 rename carry the old cookie name; keep honouring it until it expires or is replaced.
+const LEGACY_COOKIE = 'waxcrate_session'
+const sessionToken = (c: Context) => getCookie(c, COOKIE) ?? getCookie(c, LEGACY_COOKIE)
 const SESSION_DAYS = 30
 
 interface SessionUser {
@@ -53,22 +56,24 @@ export function createSession(c: Context, userId: number): void {
     path: '/',
     maxAge: SESSION_DAYS * 86_400,
   })
+  deleteCookie(c, LEGACY_COOKIE, { path: '/' })
 }
 
 export function destroySession(c: Context): void {
-  const token = getCookie(c, COOKIE)
+  const token = sessionToken(c)
   if (token) db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(sha256(token))
   deleteCookie(c, COOKIE, { path: '/' })
+  deleteCookie(c, LEGACY_COOKIE, { path: '/' })
 }
 
 /** After a password change: sign out every other device but keep the one making the change. */
 export function destroyOtherSessions(c: Context, userId: number): void {
-  const token = getCookie(c, COOKIE)
+  const token = sessionToken(c)
   db.prepare('DELETE FROM sessions WHERE user_id = ? AND token_hash != ?').run(userId, token ? sha256(token) : '')
 }
 
 function lookupUser(c: Context): SessionUser | null {
-  const token = getCookie(c, COOKIE)
+  const token = sessionToken(c)
   if (!token) return null
   const row = db
     .prepare(

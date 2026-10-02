@@ -65,7 +65,7 @@ export default function Shared() {
   }, [token])
 
   useEffect(() => {
-    if (data) document.title = `${data.title} · ${data.owner} · WaxCrate`
+    if (data) document.title = `${data.title} · ${data.owner} · Cratelog`
   }, [data])
 
   return (

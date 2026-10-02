@@ -4,7 +4,7 @@ import { CATALOG, RELEASES, seedState, type DemoState, type StoredCopy } from '.
 // In-browser stand-in for the server, used by the GitHub Pages demo (VITE_DEMO=true).
 // Same paths and response shapes as apps/server/src/routes/*; state lives in localStorage.
 
-const KEY = 'waxcrate-demo-v1'
+const KEY = 'cratelog-demo-v1'
 let state: DemoState | null = null
 
 function load(): DemoState {

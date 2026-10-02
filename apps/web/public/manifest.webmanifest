@@ -1,6 +1,6 @@
 {
-  "name": "WaxCrate",
-  "short_name": "WaxCrate",
+  "name": "Cratelog",
+  "short_name": "Cratelog",
   "description": "Your vinyl collection, in a crate.",
   "start_url": "./",
   "scope": "./",

@@ -49,5 +49,5 @@ if (fs.existsSync(path.join(config.webDir, 'index.html'))) {
 }
 
 serve({ fetch: app.fetch, port: config.port }, ({ port }) => {
-  console.log(`WaxCrate listening on http://localhost:${port}`)
+  console.log(`Cratelog listening on http://localhost:${port}`)
 })

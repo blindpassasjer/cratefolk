@@ -9,13 +9,13 @@ COPY . .
 RUN npm run build
 
 FROM node:22-slim
-LABEL org.opencontainers.image.source="https://github.com/blindpassasjer/waxcrate"
+LABEL org.opencontainers.image.source="https://github.com/blindpassasjer/cratelog"
 WORKDIR /app
 ENV NODE_ENV=production DATA_DIR=/data WEB_DIR=/app/apps/web/dist PORT=6170
 COPY package.json package-lock.json ./
 COPY apps/server/package.json apps/server/
 COPY apps/web/package.json apps/web/
-RUN npm ci --omit=dev -w @waxcrate/server && npm cache clean --force
+RUN npm ci --omit=dev -w @cratelog/server && npm cache clean --force
 COPY --from=build /app/apps/server/dist apps/server/dist
 COPY --from=build /app/apps/web/dist apps/web/dist
 VOLUME /data

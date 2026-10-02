@@ -168,7 +168,13 @@ const migrations: string[] = [
 ]
 
 fs.mkdirSync(config.dataDir, { recursive: true })
-export const db = new Database(path.join(config.dataDir, 'waxcrate.db'))
+// Cratelog was called WaxCrate before 0.4.0: adopt an existing database (and its WAL files) under the new name.
+const dbFile = path.join(config.dataDir, 'cratelog.db')
+const legacyDbFile = path.join(config.dataDir, 'waxcrate.db')
+if (!fs.existsSync(dbFile) && fs.existsSync(legacyDbFile)) {
+  for (const suffix of ['', '-wal', '-shm']) if (fs.existsSync(legacyDbFile + suffix)) fs.renameSync(legacyDbFile + suffix, dbFile + suffix)
+}
+export const db = new Database(dbFile)
 db.pragma('journal_mode = WAL')
 db.pragma('foreign_keys = ON')
 

@@ -14,14 +14,14 @@ import { useProgressive } from '../useProgressive'
 import { filterOptions, matchesFilters, matchesQuery, SORTS, sortItems, type Filters, type SortKey } from '../search'
 import ShareExport from '../ShareExport'
 
-const SIZE_KEY = 'waxcrate-cover-size'
+const SIZE_KEY = 'cratelog-cover-size'
 const SIZE_MIN = 110
 const SIZE_MAX = 340
 const SIZE_DEFAULT = 190
 
 function loadSize() {
   try {
-    const n = Number(localStorage.getItem(SIZE_KEY))
+    const n = Number(localStorage.getItem(SIZE_KEY) ?? localStorage.getItem('waxcrate-cover-size'))
     if (n >= SIZE_MIN && n <= SIZE_MAX) return n
   } catch {
     /* storage unavailable: fall back to the default */
