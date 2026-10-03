@@ -131,8 +131,8 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
             <Link to="/wishlist" onClick={onClose} className={item(pathname === '/wishlist')}>
               <Heart className="size-4" /> Wishlist
             </Link>
-            <Link to="/members" onClick={onClose} className={item(pathname.startsWith('/members'))}>
-              <Users className="size-4" /> Members
+            <Link to="/friends" onClick={onClose} className={item(pathname.startsWith('/friends'))}>
+              <Users className="size-4" /> Friends
             </Link>
             <Link to="/stats" onClick={onClose} className={item(pathname === '/stats')}>
               <BarChart3 className="size-4" /> Stats

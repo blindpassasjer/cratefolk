@@ -390,10 +390,10 @@ on('GET', '/shared/:token', (m) => {
   return { title, owner, kind: share.kind, items }
 })
 
-// ---- members ----
+// ---- friends ----
 // The demo has a single real user, so there is nobody else's collection to browse.
-on('GET', '/members', () => ({ members: [] }))
-on('GET', '/members/users', () => ({ users: load().users.filter((u) => u.id !== 1).map((u) => ({ id: u.id, name: u.name })) }))
+on('GET', '/friends', () => ({ friends: [] }))
+on('GET', '/friends/users', () => ({ users: load().users.filter((u) => u.id !== 1).map((u) => ({ id: u.id, name: u.name })) }))
 
 // ---- admin ----
 let demoRegistrationOpen = false

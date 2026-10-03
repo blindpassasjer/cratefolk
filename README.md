@@ -76,7 +76,7 @@ without installing anything.
 - 📊 **Excel export** — download your collection, a crate, the for-sale list or the wishlist as `.xlsx`
 - 👥 **Multiple users** — the admin creates accounts (and hands out one-time password reset links), or
   opens registration so people can sign up themselves; everyone gets their own private collection
-- 🤝 **Browse and share with other members** — opt in to let other users browse your collection or
+- 🤝 **Browse and share with friends** — opt in to let other users browse your collection or
   wishlist (read-only, never your grades, notes or prices), and mark copies you co-own with someone,
   which then show in both your collections
 - 💱 **Prices in your currency** and a light/dark theme that follows your system

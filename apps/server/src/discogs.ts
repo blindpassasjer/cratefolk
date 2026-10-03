@@ -253,9 +253,14 @@ export async function downloadImage(url: string): Promise<Buffer | null> {
   }
 }
 
-// Currencies Discogs accepts for marketplace prices (NOK, for one, is not among them).
-export const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'MXN', 'BRL', 'NZD', 'SEK', 'DKK', 'ZAR'] as const
-export type Currency = (typeof CURRENCIES)[number]
+// Currencies Discogs accepts for marketplace prices.
+export const MARKET_CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'MXN', 'BRL', 'NZD', 'SEK', 'DKK', 'ZAR'] as const
+export type Currency = (typeof MARKET_CURRENCIES)[number]
+// What users can pick. NOK isn't a Discogs marketplace currency, so market lookups for it use EUR instead.
+export const CURRENCIES = [...MARKET_CURRENCIES, 'NOK'] as const
+
+export const marketCurrency = (currency: string): Currency =>
+  (MARKET_CURRENCIES as readonly string[]).includes(currency) ? (currency as Currency) : 'EUR'
 
 export interface MarketStats {
   numForSale: number

@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { requireUser, type AppEnv } from '../auth.js'
 import { db } from '../db.js'
-import { DiscogsError, fetchMarketStats, type Currency } from '../discogs.js'
+import { DiscogsError, fetchMarketStats, marketCurrency } from '../discogs.js'
 import { ensureRelease } from '../releases.js'
 
 export const wishlistRoutes = new Hono<AppEnv>()
@@ -123,7 +123,7 @@ marketRoutes.use('*', requireUser)
 marketRoutes.get('/:releaseId', async (c) => {
   const releaseId = Number(c.req.param('releaseId'))
   if (!Number.isInteger(releaseId) || releaseId <= 0) return c.json({ error: 'Invalid release' }, 400)
-  const currency = c.get('user').currency as Currency
+  const currency = marketCurrency(c.get('user').currency)
   const url = `https://www.discogs.com/sell/release/${releaseId}`
 
   const row = db

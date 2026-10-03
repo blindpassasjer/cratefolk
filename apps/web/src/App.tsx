@@ -3,8 +3,8 @@ import { useAuth } from './auth'
 import Layout from './Layout'
 import Account from './pages/Account'
 import Collection from './pages/Collection'
-import Member from './pages/Member'
-import Members from './pages/Members'
+import Friend from './pages/Friend'
+import Friends from './pages/Friends'
 import Login from './pages/Login'
 import Release from './pages/Release'
 import ResetPassword from './pages/ResetPassword'
@@ -29,8 +29,8 @@ export default function App() {
         <Route element={<Layout />}>
           <Route index element={<Collection />} />
           <Route path="wishlist" element={<Wishlist />} />
-          <Route path="members" element={<Members />} />
-          <Route path="members/:id" element={<Member />} />
+          <Route path="friends" element={<Friends />} />
+          <Route path="friends/:id" element={<Friend />} />
           <Route path="stats" element={<Stats />} />
           <Route path="account" element={<Account />} />
           <Route path="release/:id" element={<Release />} />

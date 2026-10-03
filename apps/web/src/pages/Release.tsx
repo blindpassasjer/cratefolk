@@ -1,6 +1,6 @@
 import { ArrowLeft, Heart, Lightbulb, Pencil, Plus, Trash2, Users } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../auth'
 import Market, { money } from '../Market'
 import { api, GRADES, type Grade, type OwnedCopy, type ReleaseDetail, type Trivia } from '../api'
@@ -42,12 +42,14 @@ function PriceInput({ copy, currency, onSave }: { copy: OwnedCopy; currency: str
 
 export default function Release() {
   const { id } = useParams()
+  // Pages that link here (a friend's collection) say where "back" should go; otherwise it's your collection.
+  const back = (useLocation().state as { back?: { to: string; label: string } } | null)?.back ?? { to: '/', label: 'Collection' }
   const { user } = useAuth()
   const [data, setData] = useState<{ release: ReleaseDetail; copies: OwnedCopy[]; wishlisted: { id: number } | null } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [trivia, setTrivia] = useState<Trivia | null>(null)
   const { groups, refresh } = useCrates()
-  const [members, setMembers] = useState<Array<{ id: number; name: string }>>([])
+  const [friends, setFriends] = useState<Array<{ id: number; name: string }>>([])
   const [editing, setEditing] = useState(false)
   const toast = useToast()
   const { confirm } = useDialog()
@@ -68,8 +70,8 @@ export default function Release() {
   }, [load])
 
   useEffect(() => {
-    api<{ users: Array<{ id: number; name: string }> }>('/members/users')
-      .then((r) => setMembers(r.users))
+    api<{ users: Array<{ id: number; name: string }> }>('/friends/users')
+      .then((r) => setFriends(r.users))
       .catch(() => {})
   }, [])
 
@@ -181,8 +183,8 @@ export default function Release() {
 
   return (
     <div className="space-y-8">
-      <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-ink-300 hover:text-ink-100">
-        <ArrowLeft className="size-4" /> Collection
+      <Link to={back.to} className="inline-flex items-center gap-1.5 text-sm text-ink-300 hover:text-ink-100">
+        <ArrowLeft className="size-4" /> {back.label}
       </Link>
 
       <div className="grid gap-8 md:grid-cols-[320px_1fr]">
@@ -296,7 +298,7 @@ export default function Release() {
                 </label>
                 {!!c.forSale && <PriceInput copy={c} currency={user?.currency ?? 'USD'} onSave={(askingPrice) => void patch(c.copyId, { askingPrice })} />}
                 {c.ownerId === user?.id ? (
-                  members.length > 0 && (
+                  friends.length > 0 && (
                     <label className="flex items-center gap-2 text-ink-500">
                       <Users className="size-4" aria-hidden="true" />
                       Shared with
@@ -306,7 +308,7 @@ export default function Release() {
                         onChange={(e) => void patch(c.copyId, { coOwnerId: e.target.value ? Number(e.target.value) : null })}
                       >
                         <option value="">Nobody</option>
-                        {members.map((m) => (
+                        {friends.map((m) => (
                           <option key={m.id} value={m.id}>{m.name}</option>
                         ))}
                       </select>

@@ -1,6 +1,6 @@
 import { ArrowLeft, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { api, ApiError } from '../api'
 import Cover from '../Cover'
 import FilterBar from '../FilterBar'
@@ -22,15 +22,16 @@ interface Item {
   shared?: number
 }
 
-interface MemberView {
+interface FriendView {
   name: string
   collection: Item[] | null
   wishlist: Item[] | null
 }
 
-export default function Member() {
+export default function Friend() {
   const { id } = useParams()
-  const [data, setData] = useState<MemberView | null>(null)
+  const location = useLocation()
+  const [data, setData] = useState<FriendView | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [params, setParams] = useSearchParams()
   const query = params.get('q') ?? ''
@@ -54,9 +55,9 @@ export default function Member() {
   const { visible, hasMore, sentinelRef } = useProgressive(shown, [id, tab, query, sort, ...Object.values(filters)].join('|'))
 
   useEffect(() => {
-    api<MemberView>(`/members/${id}`)
+    api<FriendView>(`/friends/${id}`)
       .then(setData)
-      .catch((e) => setError(e instanceof ApiError && e.status === 404 ? 'This member is not sharing their collection.' : 'Could not load this member.'))
+      .catch((e) => setError(e instanceof ApiError && e.status === 404 ? 'This friend is not sharing their collection.' : 'Could not load this friend.'))
   }, [id])
 
   if (error) return <p className="text-sm text-ink-500">{error}</p>
@@ -64,8 +65,8 @@ export default function Member() {
 
   return (
     <div className="space-y-6">
-      <Link to="/members" className="inline-flex items-center gap-1.5 text-sm text-ink-300 hover:text-ink-100">
-        <ArrowLeft className="size-4" /> Members
+      <Link to="/friends" className="inline-flex items-center gap-1.5 text-sm text-ink-300 hover:text-ink-100">
+        <ArrowLeft className="size-4" /> Friends
       </Link>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -104,7 +105,7 @@ export default function Member() {
               <Cover
                 releaseId={i.releaseId}
                 hasCover={!!i.hasCover}
-                src={`/api/members/${id}/cover/${i.releaseId}`}
+                src={`/api/friends/${id}/cover/${i.releaseId}`}
                 className="rounded-md shadow-lg shadow-black/40 ring-1 ring-ink-800 transition group-hover:-translate-y-0.5 group-hover:ring-wax/60"
               />
               {i.copies > 1 && <span className="absolute right-2 top-2 rounded-md bg-black/60 px-1.5 py-0.5 text-xs text-white">×{i.copies}</span>}
@@ -122,7 +123,7 @@ export default function Member() {
           return i.releaseId < 0 ? (
             <div key={i.releaseId} className="group relative">{tile}</div>
           ) : (
-            <Link key={i.releaseId} to={`/release/${i.releaseId}`} className="group relative block">{tile}</Link>
+            <Link key={i.releaseId} to={`/release/${i.releaseId}`} state={{ back: { to: location.pathname + location.search, label: `${data.name}'s ${tab}` } }} className="group relative block">{tile}</Link>
           )
         })}
       </div>

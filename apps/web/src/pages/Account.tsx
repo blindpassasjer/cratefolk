@@ -139,10 +139,10 @@ export default function Account() {
           )}
         </Card>
 
-        <Card title="Sharing" hint="Other members of this Cratelog can browse what you allow here. They only see which records you have, never your grades, notes or prices.">
+        <Card title="Sharing" hint="Friends on this Cratelog can browse what you allow here. They only see which records you have, never your grades, notes or prices.">
           {([
-            ['shareCollection', 'Let other members browse my collection'],
-            ['shareWishlist', 'Let other members see my wishlist'],
+            ['shareCollection', 'Let friends browse my collection'],
+            ['shareWishlist', 'Let friends see my wishlist'],
           ] as const).map(([field, label]) => (
             <label key={field} className="flex items-center gap-2 text-sm text-ink-300">
               <input
@@ -156,7 +156,7 @@ export default function Account() {
           ))}
         </Card>
 
-        <Card title="Preferences" hint="Marketplace prices on your wishlist are shown in this currency.">
+        <Card title="Preferences" hint="Marketplace prices on your wishlist are shown in this currency. NOK is used for your asking prices, but Discogs does not offer it, so marketplace prices show in EUR.">
           <Field label="Currency">
             <select className={input} value={user?.currency ?? 'USD'} onChange={(e) => void setCurrency(e.target.value)}>
               {CURRENCIES.map((c) => (

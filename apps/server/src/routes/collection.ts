@@ -101,7 +101,7 @@ collectionRoutes.patch('/:id', async (c) => {
   if (coOwnerId !== undefined) {
     if (copy.ownerId !== me) return c.json({ error: 'Only the person who added this copy can change who it is shared with' }, 403)
     if (coOwnerId !== null && (coOwnerId === me || !db.prepare('SELECT 1 FROM users WHERE id = ? AND disabled = 0').get(coOwnerId))) {
-      return c.json({ error: 'Choose another member to share this copy with' }, 400)
+      return c.json({ error: 'Choose another friend to share this copy with' }, 400)
     }
     db.prepare('UPDATE copies SET co_owner_id = ? WHERE id = ?').run(coOwnerId, id)
   }

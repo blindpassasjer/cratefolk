@@ -177,7 +177,7 @@ const migrations: string[] = [
   ALTER TABLE copies ADD COLUMN co_owner_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
   CREATE INDEX copies_co_owner_id ON copies(co_owner_id);
 
-  -- Opt-in: let other signed-in members browse this user's collection and/or wishlist.
+  -- Opt-in: let other signed-in friends browse this user's collection and/or wishlist.
   ALTER TABLE users ADD COLUMN share_collection INTEGER NOT NULL DEFAULT 0;
   ALTER TABLE users ADD COLUMN share_wishlist INTEGER NOT NULL DEFAULT 0;
   `,

@@ -15,7 +15,7 @@ import { groupRoutes } from './routes/groups.js'
 import { statsRoutes } from './routes/stats.js'
 import { publicShareRoutes, shareRoutes } from './routes/share.js'
 import { discogsRoutes } from './routes/discogs.js'
-import { memberRoutes } from './routes/members.js'
+import { friendRoutes } from './routes/friends.js'
 import { marketRoutes, statusRoutes, wishlistRoutes } from './routes/wishlist.js'
 
 migrate()
@@ -39,7 +39,7 @@ app.route('/api/wishlist', wishlistRoutes)
 app.route('/api/status', statusRoutes)
 app.route('/api/stats', statsRoutes)
 app.route('/api/market', marketRoutes)
-app.route('/api/members', memberRoutes)
+app.route('/api/friends', friendRoutes)
 app.all('/api/*', (c) => c.json({ error: 'Not found' }, 404))
 
 // In production the server also serves the built web app (SPA fallback to index.html).
