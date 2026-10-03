@@ -12,10 +12,12 @@ import { useProgressive } from '../useProgressive'
 import { filterOptions, matchesFilters, matchesQuery, SORTS, sortItems, type Filters, type SortKey } from '../search'
 import ShareExport from '../ShareExport'
 import Cover from '../Cover'
+import { CoverSizeSlider, useCoverSize } from '../CoverSize'
 
 export default function Wishlist() {
   const { user, setCurrency } = useAuth()
   const [items, setItems] = useState<WishItem[] | null>(null)
+  const cover = useCoverSize()
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [params, setParams] = useSearchParams()
@@ -87,7 +89,9 @@ export default function Wishlist() {
       )}
 
       {items && items.length > 0 && (
-        <FilterBar sort={sort} onSort={(s) => setParam('sort', s === 'added' ? '' : s)} filters={filters} onFilter={setParam} options={options} sorts={sorts} />
+        <FilterBar sort={sort} onSort={(s) => setParam('sort', s === 'added' ? '' : s)} filters={filters} onFilter={setParam} options={options} sorts={sorts}>
+          <CoverSizeSlider size={cover.size} onChange={cover.resize} />
+        </FilterBar>
       )}
 
       {error && <p className="text-sm text-danger">{error}</p>}
@@ -106,7 +110,7 @@ export default function Wishlist() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+      <div className="grid gap-5" style={cover.gridStyle}>
         {visible?.map((w) => (
           <div key={w.wishId} className="group">
             <Link to={`/release/${w.releaseId}`} className="block">

@@ -1,4 +1,4 @@
-import { Image, Pencil, Plus, Tag, Trash2, Users } from 'lucide-react'
+import { Pencil, Plus, Tag, Trash2, Users } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import AddRecord from '../AddRecord'
@@ -7,6 +7,7 @@ import { useAuth } from '../auth'
 import { money } from '../Market'
 import CollectionPicker from '../CollectionPicker'
 import Cover from '../Cover'
+import { CoverSizeSlider, useCoverSize } from '../CoverSize'
 import { useCrates } from '../crates'
 import { CrateArt, FormatBadge } from '../Art'
 import SearchBar from '../SearchBar'
@@ -14,21 +15,6 @@ import FilterBar from '../FilterBar'
 import { useProgressive } from '../useProgressive'
 import { filterOptions, matchesFilters, matchesQuery, SORTS, sortItems, type Filters, type SortKey } from '../search'
 import ShareExport from '../ShareExport'
-
-const SIZE_KEY = 'cratelog-cover-size'
-const SIZE_MIN = 110
-const SIZE_MAX = 340
-const SIZE_DEFAULT = 190
-
-function loadSize() {
-  try {
-    const n = Number(localStorage.getItem(SIZE_KEY) ?? localStorage.getItem('waxcrate-cover-size'))
-    if (n >= SIZE_MIN && n <= SIZE_MAX) return n
-  } catch {
-    /* storage unavailable: fall back to the default */
-  }
-  return SIZE_DEFAULT
-}
 
 export default function Collection() {
   const [params, setParams] = useSearchParams()
@@ -41,7 +27,7 @@ export default function Collection() {
 
   const [copies, setCopies] = useState<Copy[] | null>(null)
   const [adding, setAdding] = useState(false)
-  const [coverSize, setCoverSize] = useState(loadSize)
+  const cover = useCoverSize()
   const [error, setError] = useState<string | null>(null)
   const { groups, refresh, manage } = useCrates()
   const { user } = useAuth()
@@ -76,14 +62,6 @@ export default function Collection() {
       return next
     }, { replace: true })
   const setQuery = (q: string) => setParam('q', q)
-  const resize = (n: number) => {
-    setCoverSize(n)
-    try {
-      localStorage.setItem(SIZE_KEY, String(n))
-    } catch {
-      /* the size just won't persist */
-    }
-  }
 
   const filtering = !!query || Object.values(filters).some(Boolean)
   const shown = copies ? sortItems(copies.filter((c) => matchesQuery(c, query) && matchesFilters(c, filters)), sort) : null
@@ -128,20 +106,7 @@ export default function Collection() {
         <div className="space-y-3">
           <SearchBar value={query} onChange={setQuery} placeholder="Search artist, title, label, catalog no. or barcode  ( / )" />
           <FilterBar sort={sort} onSort={(s) => setParam('sort', s === 'added' ? '' : s)} filters={filters} onFilter={setParam} options={options}>
-            <label className="flex items-center gap-2 text-sm text-ink-500" title="Cover size">
-              <Image className="size-4" aria-hidden="true" />
-              <input
-                type="range"
-                aria-label="Cover size"
-                min={SIZE_MIN}
-                max={SIZE_MAX}
-                step={10}
-                value={coverSize}
-                onChange={(e) => resize(Number(e.target.value))}
-                onDoubleClick={() => resize(SIZE_DEFAULT)}
-                className="w-28 accent-wax"
-              />
-            </label>
+            <CoverSizeSlider size={cover.size} onChange={cover.resize} />
           </FilterBar>
         </div>
       )}
@@ -174,7 +139,7 @@ export default function Collection() {
         </div>
       )}
 
-      <div className="grid gap-5" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(min(${coverSize}px, 100%), 1fr))` }}>
+      <div className="grid gap-5" style={cover.gridStyle}>
         {visible?.map((c) => (
           <div key={c.copyId} className="group relative">
             <Link to={`/release/${c.releaseId}`} className="block">

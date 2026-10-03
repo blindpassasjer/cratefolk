@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { api, ApiError } from '../api'
 import Cover from '../Cover'
+import { CoverSizeSlider, useCoverSize } from '../CoverSize'
 import FilterBar from '../FilterBar'
 import SearchBar from '../SearchBar'
 import { filterOptions, matchesFilters, matchesQuery, SORTS, sortItems, type Filters, type SortKey } from '../search'
@@ -31,6 +32,7 @@ interface FriendView {
 export default function Friend() {
   const { id } = useParams()
   const location = useLocation()
+  const cover = useCoverSize()
   const [data, setData] = useState<FriendView | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [params, setParams] = useSearchParams()
@@ -93,12 +95,14 @@ export default function Friend() {
       {items.length > 8 && (
         <div className="space-y-3">
           <SearchBar value={query} onChange={(q) => setParam('q', q)} placeholder="Search artist, title, label or catalog no.  ( / )" />
-          <FilterBar sort={sort} onSort={(s) => setParam('sort', s === 'artist' ? '' : s)} filters={filters} onFilter={setParam} options={filterOptions(items)} sorts={sorts} />
+          <FilterBar sort={sort} onSort={(s) => setParam('sort', s === 'artist' ? '' : s)} filters={filters} onFilter={setParam} options={filterOptions(items)} sorts={sorts}>
+<CoverSizeSlider size={cover.size} onChange={cover.resize} />
+</FilterBar>
         </div>
       )}
       {shown?.length === 0 && <p className="py-16 text-center text-sm text-ink-500">No records match.</p>}
 
-      <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+      <div className="grid gap-5" style={cover.gridStyle}>
         {visible?.map((i) => {
           const tile = (
             <>

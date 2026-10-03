@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { api, ApiError, IS_DEMO } from '../api'
 import Cover from '../Cover'
+import { CoverSizeSlider, useCoverSize } from '../CoverSize'
 import FilterBar from '../FilterBar'
 import SearchBar from '../SearchBar'
 import { filterOptions, matchesFilters, matchesQuery, SORTS, sortItems, type Filters, type SortKey } from '../search'
@@ -37,6 +38,7 @@ interface SharedView {
 
 export default function Shared() {
   const { token } = useParams()
+  const cover = useCoverSize()
   const [data, setData] = useState<SharedView | null>(null)
   const [gone, setGone] = useState(false)
   const [failed, setFailed] = useState(false)
@@ -109,7 +111,9 @@ export default function Shared() {
             {data.items.length > 8 && (
               <div className="space-y-3">
                 <SearchBar value={query} onChange={(q) => setParam('q', q)} placeholder="Search artist, title, label or catalog no.  ( / )" />
-                <FilterBar sort={sort} onSort={(s) => setParam('sort', s === 'artist' ? '' : s)} filters={filters} onFilter={setParam} options={filterOptions(data.items)} sorts={sorts} />
+                <FilterBar sort={sort} onSort={(s) => setParam('sort', s === 'artist' ? '' : s)} filters={filters} onFilter={setParam} options={filterOptions(data.items)} sorts={sorts}>
+<CoverSizeSlider size={cover.size} onChange={cover.resize} />
+</FilterBar>
               </div>
             )}
             {shown?.length === 0 && (
@@ -120,7 +124,7 @@ export default function Shared() {
                 </button>
               </p>
             )}
-            <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            <div className="grid gap-5" style={cover.gridStyle}>
               {visible?.map((i) => (
                 <a
                   key={i.copyId ?? i.releaseId}
