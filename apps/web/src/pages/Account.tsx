@@ -20,35 +20,13 @@ function Card({
   children: ReactNode;
 }) {
   return (
-    <section className="space-y-4 rounded-xl border border-ink-800 bg-ink-900/60 p-5">
+    <section className="mb-6 break-inside-avoid space-y-4 rounded-xl border border-ink-800 bg-ink-900/60 p-5">
       <div>
         <h2 className="font-medium">{title}</h2>
         {hint && <p className="mt-1 text-xs text-ink-500">{hint}</p>}
       </div>
       {children}
     </section>
-  );
-}
-
-function Group({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="space-y-4">
-      <div className="border-b border-ink-800 pb-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-300">
-          {title}
-        </h2>
-        <p className="mt-0.5 text-xs text-ink-500">{description}</p>
-      </div>
-      {children}
-    </div>
   );
 }
 
@@ -171,11 +149,8 @@ export default function Account() {
       <div className="space-y-8">
         <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
 
-        <Group
-          title="Sign-in"
-          description="Who you are and how you get into your Cratelog."
-        >
-          <div className="grid items-start gap-6 lg:grid-cols-2">
+        <div className="columns-1 gap-6 lg:columns-2">
+
             <Card
               title="Profile"
               hint={
@@ -275,16 +250,9 @@ export default function Account() {
                 </form>
               )}
             </Card>
-          </div>
-        </Group>
 
-        <Group
-          title="Preferences"
-          description="How prices and shop links appear in your Cratelog."
-        >
-          <div className="grid items-start gap-6 lg:grid-cols-2">
             <Card
-              title="Preferences"
+              title="Currency"
               hint="Marketplace prices on your wishlist are shown in this currency. NOK is used for your asking prices, but Discogs does not offer it, so marketplace prices show in EUR."
             >
               <Field label="Currency">
@@ -332,13 +300,7 @@ export default function Account() {
                 ),
               )}
             </Card>
-          </div>
-        </Group>
 
-        <Group
-          title="Privacy"
-          description="What friends on this Cratelog can see."
-        >
           <Card
             title="Sharing"
             hint="Friends on this Cratelog can browse what you allow here. They only see which records you have, never your grades, notes or prices. Activity only shows for the parts of your Cratelog you share."
@@ -369,7 +331,7 @@ export default function Account() {
               </label>
             ))}
           </Card>
-        </Group>
+        </div>
       </div>
       {isAdmin && <AdminUsers />}
     </div>
