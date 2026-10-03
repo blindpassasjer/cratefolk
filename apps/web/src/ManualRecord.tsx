@@ -17,8 +17,10 @@ async function resizeCover(file: File): Promise<string> {
   return canvas.toDataURL('image/jpeg', 0.85)
 }
 
-// A track line may start with its position and a separator: "A1. Title", "B2) Title", "A1 | Title", "1-3: Title".
+// A track line may start with its position and a separator ("A1. Title", "B2) Title", "A1 | Title", "1-3: Title")
+// and end with its duration ("Title - 3:45").
 const POSITION = /^([A-Za-z]{1,2}\d{1,2}|\d{1,2}(?:-\d{1,2})?)\s*[.|:)]\s*(.+)$/
+const DURATION = /^(.+?)\s+-\s+(\d{1,3}:\d{2}(?::\d{2})?)$/
 
 /** One track per line; lines without a position prefix are numbered by their place in the list. */
 function parseTracks(text: string) {
@@ -27,14 +29,21 @@ function parseTracks(text: string) {
     .map((t) => t.trim())
     .filter(Boolean)
     .map((line, i) => {
-      const m = POSITION.exec(line)
-      return { position: m ? m[1]!.toUpperCase() : String(i + 1), title: m ? m[2]! : line, duration: '' }
+      const p = POSITION.exec(line)
+      const rest = p ? p[2]! : line
+      const d = DURATION.exec(rest)
+      return { position: p ? p[1]!.toUpperCase() : String(i + 1), title: d ? d[1]! : rest, duration: d ? d[2]! : '' }
     })
 }
 
 /** Inverse of parseTracks: only shows a position when it isn't the plain running number. */
 function formatTracks(tracklist: ReleaseDetail['tracklist']) {
-  return tracklist.map((t, i) => (t.position && t.position !== String(i + 1) ? `${t.position}. ${t.title}` : t.title)).join('\n')
+  return tracklist
+    .map((t, i) => {
+      const pos = t.position && t.position !== String(i + 1) ? `${t.position}. ` : ''
+      return `${pos}${t.title}${t.duration ? ` - ${t.duration}` : ''}`
+    })
+    .join('\n')
 }
 
 const input = 'w-full rounded-md border border-ink-700 bg-ink-950 px-3 py-2 text-sm outline-none focus:border-wax'
@@ -211,8 +220,8 @@ export default function ManualRecord({
         <Field label="Genres (comma separated)">
           <input value={f.genres} onChange={set('genres')} className={input} />
         </Field>
-        <Field label="Tracklist (one track per line, optionally prefixed with its side, e.g. “A1. Title”)">
-          <textarea value={f.tracks} onChange={set('tracks')} rows={4} placeholder={'A1. First track\nA2. Second track\nB1. Flip side'} className={input} />
+        <Field label="Tracklist (one track per line, optionally “A1. Title - 3:45”)">
+          <textarea value={f.tracks} onChange={set('tracks')} rows={4} placeholder={'A1. First track - 3:45\nA2. Second track - 4:10\nB1. Flip side - 2:58'} className={input} />
         </Field>
         <Field label="Notes">
           <textarea value={f.notes} onChange={set('notes')} rows={2} maxLength={2000} className={input} />
