@@ -26,7 +26,7 @@
 ---
 
 Cratelog keeps track of the vinyl records, CDs and cassettes you own, the ones you want, and the ones
-you're selling. Add a release by searching Discogs (by name, catalog number or barcode) and Cratelog
+you're selling. Add a release by searching Discogs (one search box for name, catalog number or barcode) and Cratelog
 stores the metadata and cover in **your own SQLite database**, so your collection keeps working, and
 stays yours, even if Discogs changes or goes away.
 
@@ -50,7 +50,7 @@ without installing anything.
 
 ## Features
 
-- 💿 **Vinyl, CDs and cassettes** — search by artist/album, catalog number or barcode (vinyl by
+- 💿 **Vinyl, CDs and cassettes** — one search box for artist/album, catalog number or barcode (vinyl by
   default, or include every format); the exact pressing, tracklist, label and cover are saved locally,
   and CDs and cassettes get a small badge on their cover. Not on Discogs? Add the record by hand,
   with your own cover photo and tracklist (you can edit or delete these later). Adding a record you
@@ -74,8 +74,11 @@ without installing anything.
 - 📈 **Stats** — records by decade, format, genre, artist and label, what you added recently, and the
   value of your for-sale copies
 - 📊 **Excel export** — download your collection, a crate, the for-sale list or the wishlist as `.xlsx`
-- 👥 **Multiple users** — the admin creates accounts (and hands out one-time password reset links);
-  everyone gets their own private collection
+- 👥 **Multiple users** — the admin creates accounts (and hands out one-time password reset links), or
+  opens registration so people can sign up themselves; everyone gets their own private collection
+- 🤝 **Browse and share with other members** — opt in to let other users browse your collection or
+  wishlist (read-only, never your grades, notes or prices), and mark copies you co-own with someone,
+  which then show in both your collections
 - 💱 **Prices in your currency** and a light/dark theme that follows your system
 - 🐳 **One container** — the API, the web app and an SQLite database, nothing else to run
 
@@ -117,7 +120,8 @@ That's it. The database is created and migrated automatically on first start.
 
 - The admin account is created from `ADMIN_EMAIL` / `ADMIN_PASSWORD` on **every** start, and its password
   is re-synced from the environment, so changing the variable and restarting is how you reset it.
-- There is no public sign-up. The admin creates accounts under **Users**.
+- Sign-up is closed by default: the admin creates accounts under **Users**, and can switch registration
+  on there if you want people to create their own accounts.
 - To use another port, change the left side of `'6170:6170'` under `ports:` in `docker-compose.yml`.
 - If you use `env_file: .env`, do not put `DATA_DIR` or `PORT` in it, and keep `DATA_DIR: /data` under
   `environment:` so nothing can redirect the database outside the data folder.

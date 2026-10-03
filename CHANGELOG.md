@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.1 (2026-10-03)
+
+### Added
+- **Open or close registration.** Under Account → Users, the admin can switch registration on. While it is open, the sign-in page offers "Create one" (name, email, password); new accounts are regular users and are signed in straight away. It is closed by default, so existing installs behave as before. Registration attempts are rate-limited per IP.
+- **Browse other members' collections.** Under Account → Sharing, each member can let others browse their collection and/or wishlist (both off by default). The new **Members** page in the sidebar lists everyone who opted in and shows a read-only grid with search and filters. Grades, notes and prices are never shown.
+- **Shared ownership.** On a record's page, choose "Shared with" on a copy you added to co-own it with another member. The copy appears in both collections with a "Shared" badge, counts in both stats and exports, and either owner can edit it. If the person who added it deletes it, it goes for both; the co-owner can only remove it from their own collection. Shared copies can't be filed into the other person's crates, and share links and for-sale lists still use only the person who added the copy.
+
+### Changed
+- **One search box for adding records.** The Search / Catalog # / Barcode tabs are gone. A run of 8–14 digits is searched as a barcode, anything else as free text, and if free text finds nothing it is retried as a catalog number.
+
+### Upgrading
+Database migrations run automatically on start (a settings table, and new columns for shared copies and sharing preferences). Back up `data/` first, as always: older versions can't read a migrated database.
+
 ## 0.4.0 (2026-10-03)
 
 ### Changed
