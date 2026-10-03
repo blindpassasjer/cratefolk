@@ -12,6 +12,7 @@ export default function AdminUsers() {
   const { confirm, prompt } = useDialog()
   const [loadError, setLoadError] = useState<string | null>(null)
   const [form, setForm] = useState({ name: '', email: '', password: '' })
+  const [regOpen, setRegOpen] = useState<boolean | null>(null)
   const [link, setLink] = useState<{ email: string; url: string } | null>(null)
 
   const load = useCallback(async () => {
@@ -20,7 +21,20 @@ export default function AdminUsers() {
 
   useEffect(() => {
     load().catch((e: Error) => setLoadError(e.message))
+    api<{ registrationOpen: boolean }>('/admin/settings')
+      .then((s) => setRegOpen(s.registrationOpen))
+      .catch(() => {})
   }, [load])
+
+  async function toggleRegistration() {
+    try {
+      const s = await api<{ registrationOpen: boolean }>('/admin/settings', { method: 'PATCH', json: { registrationOpen: !regOpen } })
+      setRegOpen(s.registrationOpen)
+      toast.success(s.registrationOpen ? 'Registration is open' : 'Registration is closed')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not update registration')
+    }
+  }
 
   async function run(action: () => Promise<unknown>, success: string) {
     try {
@@ -76,6 +90,25 @@ export default function AdminUsers() {
   return (
     <section className="space-y-4">
       <h2 className="text-xl font-semibold tracking-tight">Users</h2>
+
+      <div className="flex items-center justify-between gap-4 rounded-xl border border-ink-800 bg-ink-900/60 p-4">
+        <div className="space-y-0.5">
+          <h3 className="text-sm font-medium">Registration</h3>
+          <p className="text-sm text-ink-300">
+            {regOpen ? 'Open: anyone can create an account from the sign-in page.' : 'Closed: only you can create accounts.'}
+          </p>
+        </div>
+        <button
+          role="switch"
+          aria-checked={!!regOpen}
+          aria-label="Allow registration"
+          disabled={regOpen === null}
+          onClick={() => void toggleRegistration()}
+          className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${regOpen ? 'bg-wax' : 'bg-ink-700'}`}
+        >
+          <span className={`absolute left-0.5 top-0.5 size-5 rounded-full bg-white transition-transform ${regOpen ? 'translate-x-5' : ''}`} />
+        </button>
+      </div>
 
       <form onSubmit={create} className="grid gap-3 rounded-xl border border-ink-800 bg-ink-900/60 p-4 sm:grid-cols-[1fr_1fr_1fr_auto]">
         <input className={input} placeholder="Name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />

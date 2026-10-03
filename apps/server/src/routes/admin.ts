@@ -4,9 +4,21 @@ import crypto from 'node:crypto'
 import { hashPassword, requireAdmin, requireUser, sha256, type AppEnv } from '../auth.js'
 import { config } from '../config.js'
 import { db } from '../db.js'
+import { registrationOpen } from './auth.js'
 
 export const adminRoutes = new Hono<AppEnv>()
 adminRoutes.use('*', requireUser, requireAdmin)
+
+adminRoutes.get('/settings', (c) => c.json({ registrationOpen: registrationOpen() }))
+
+adminRoutes.patch('/settings', async (c) => {
+  const parsed = z.object({ registrationOpen: z.boolean() }).safeParse(await c.req.json().catch(() => null))
+  if (!parsed.success) return c.json({ error: 'registrationOpen must be a boolean' }, 400)
+  db.prepare(
+    "INSERT INTO settings (key, value) VALUES ('registration_open', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+  ).run(parsed.data.registrationOpen ? '1' : '0')
+  return c.json({ registrationOpen: parsed.data.registrationOpen })
+})
 
 const USER_COLUMNS = 'id, email, name, role, disabled, created_at AS createdAt'
 

@@ -165,6 +165,13 @@ const migrations: string[] = [
     fetched_at INTEGER NOT NULL
   );
   `,
+  `
+  -- Instance-wide admin settings as key/value pairs. Registration is closed unless set to '1'.
+  CREATE TABLE settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
+  `,
 ]
 
 fs.mkdirSync(config.dataDir, { recursive: true })

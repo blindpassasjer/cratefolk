@@ -384,6 +384,13 @@ on('GET', '/shared/:token', (m) => {
 })
 
 // ---- admin ----
+let demoRegistrationOpen = false
+on('GET', '/auth/registration-status', () => ({ open: demoRegistrationOpen }))
+on('GET', '/admin/settings', () => ({ registrationOpen: demoRegistrationOpen }))
+on('PATCH', '/admin/settings', (_m, _q, b) => {
+  demoRegistrationOpen = !!b.registrationOpen
+  return { registrationOpen: demoRegistrationOpen }
+})
 const adminRow = (u: DemoState['users'][number]): AdminUser => u
 const userById = (id: string | undefined) => load().users.find((u) => u.id === Number(id)) ?? fail('User not found', 404)
 on('GET', '/admin/users', () => ({ users: load().users.map(adminRow) }))

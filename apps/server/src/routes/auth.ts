@@ -72,6 +72,38 @@ authRoutes.post('/login', async (c) => {
   return c.json({ ok: true })
 })
 
+export const registrationOpen = () =>
+  (db.prepare("SELECT value FROM settings WHERE key = 'registration_open'").get() as { value: string } | undefined)?.value === '1'
+
+authRoutes.get('/registration-status', (c) => c.json({ open: registrationOpen() }))
+
+const registerSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  email: z.string().trim().email(),
+  password: z.string().min(8).max(200),
+})
+
+authRoutes.post('/register', async (c) => {
+  if (!registrationOpen()) return c.json({ error: 'Registration is closed' }, 403)
+  const parsed = registerSchema.safeParse(await c.req.json().catch(() => null))
+  if (!parsed.success) return c.json({ error: 'Valid name, email and a password of 8+ characters required' }, 400)
+  const { name, password } = parsed.data
+  const email = parsed.data.email.toLowerCase()
+
+  const ipKey = `register|${clientIp(c)}`
+  if (blocked(ipKey, MAX_FAILURES)) return c.json({ error: 'Too many attempts, try again later' }, 429)
+  recordFailure(ipKey) // counts every attempt, so one address can't mass-create accounts
+
+  if (db.prepare('SELECT 1 FROM users WHERE email = ?').get(email)) {
+    return c.json({ error: 'An account with that email already exists' }, 409)
+  }
+  const info = db
+    .prepare("INSERT INTO users (email, name, password_hash, role) VALUES (?, ?, ?, 'user')")
+    .run(email, name, await hashPassword(password))
+  createSession(c, Number(info.lastInsertRowid))
+  return c.json({ ok: true }, 201)
+})
+
 authRoutes.post('/logout', (c) => {
   destroySession(c)
   return c.json({ ok: true })
