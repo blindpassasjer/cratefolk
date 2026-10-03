@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.1 (2026-10-03)
 
 ### Added
 - The **cover size slider** is now also on the Wishlist, shared links and friends' pages. The size is shared with the Collection, so it stays the same everywhere.
