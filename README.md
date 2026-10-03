@@ -79,6 +79,9 @@ without installing anything.
 - 🤝 **Browse and share with friends** — opt in to let other users browse your collection or
   wishlist (read-only, never your grades, notes or prices), and mark copies you co-own with someone,
   which then show in both your collections
+- 📰 **Friends' activity feed** — a collapsible sidebar feed of what friends add, wishlist, put up for
+  sale and sell (only what they share, and they can opt out), plus a "Mark as sold" button for your
+  own copies
 - 💱 **Prices in your currency** and a light/dark theme that follows your system
 - 🐳 **One container** — the API, the web app and an SQLite database, nothing else to run
 

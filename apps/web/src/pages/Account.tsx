@@ -65,7 +65,7 @@ export default function Account() {
     }
   }
 
-  async function saveSharing(patch: { shareCollection?: boolean; shareWishlist?: boolean }) {
+  async function saveSharing(patch: { shareCollection?: boolean; shareWishlist?: boolean; shareActivity?: boolean }) {
     try {
       await api('/auth/me', { method: 'PATCH', json: patch })
       await refresh()
@@ -150,10 +150,11 @@ export default function Account() {
           )}
         </Card>
 
-        <Card title="Sharing" hint="Friends on this Cratelog can browse what you allow here. They only see which records you have, never your grades, notes or prices.">
+        <Card title="Sharing" hint="Friends on this Cratelog can browse what you allow here. They only see which records you have, never your grades, notes or prices. Activity only shows for what you share above.">
           {([
             ['shareCollection', 'Let friends browse my collection'],
             ['shareWishlist', 'Let friends see my wishlist'],
+            ['shareActivity', "Show what I add, wishlist and sell in friends' activity feeds"],
           ] as const).map(([field, label]) => (
             <label key={field} className="flex items-center gap-2 text-sm text-ink-300">
               <input

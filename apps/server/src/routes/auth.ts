@@ -117,6 +117,7 @@ const profileSchema = z.object({
   currency: z.enum(CURRENCIES).optional(),
   shareCollection: z.boolean().optional(),
   shareWishlist: z.boolean().optional(),
+  shareActivity: z.boolean().optional(),
   currentPassword: z.string().optional(),
 })
 
@@ -130,7 +131,7 @@ authRoutes.patch('/me', requireUser, async (c) => {
   const parsed = profileSchema.safeParse(await c.req.json().catch(() => null))
   if (!parsed.success) return c.json({ error: 'Check the details you entered' }, 400)
   const user = c.get('user')
-  const { name, email, currency, currentPassword, shareCollection, shareWishlist } = parsed.data
+  const { name, email, currency, currentPassword, shareCollection, shareWishlist, shareActivity } = parsed.data
 
   if (email !== undefined && email.toLowerCase() !== user.email) {
     if (user.email === config.adminEmail) {
@@ -148,8 +149,9 @@ authRoutes.patch('/me', requireUser, async (c) => {
   if (currency !== undefined) db.prepare('UPDATE users SET currency = ? WHERE id = ?').run(currency, user.id)
   if (shareCollection !== undefined) db.prepare('UPDATE users SET share_collection = ? WHERE id = ?').run(shareCollection ? 1 : 0, user.id)
   if (shareWishlist !== undefined) db.prepare('UPDATE users SET share_wishlist = ? WHERE id = ?').run(shareWishlist ? 1 : 0, user.id)
+  if (shareActivity !== undefined) db.prepare('UPDATE users SET share_activity = ? WHERE id = ?').run(shareActivity ? 1 : 0, user.id)
 
-  return c.json({ user: db.prepare('SELECT id, email, name, role, currency, share_collection AS shareCollection, share_wishlist AS shareWishlist FROM users WHERE id = ?').get(user.id) })
+  return c.json({ user: db.prepare('SELECT id, email, name, role, currency, share_collection AS shareCollection, share_wishlist AS shareWishlist, share_activity AS shareActivity FROM users WHERE id = ?').get(user.id) })
 })
 
 const passwordSchema = z.object({

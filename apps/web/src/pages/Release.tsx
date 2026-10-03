@@ -151,6 +151,18 @@ export default function Release() {
     if (last) navigate('/', { replace: true })
   }
 
+  async function markSold(copyId: number) {
+    const shared = data?.copies.find((c) => c.copyId === copyId)?.coOwnerName
+    const ok = await confirm({
+      title: 'Mark as sold?',
+      message: `It will be removed from your collection${shared ? ` and from ${shared}'s` : ''}, and friends who follow your activity will see that you sold it.`,
+      confirmLabel: 'Mark as sold',
+    })
+    if (!ok) return
+    await act(() => api(`/collection/${copyId}/sold`, { method: 'POST' }), 'Marked as sold')
+    if (data?.copies.length === 1) navigate('/', { replace: true })
+  }
+
   async function deleteRecord() {
     const ok = await confirm({
       title: 'Delete this record?',
@@ -296,6 +308,11 @@ export default function Release() {
                   />
                   For sale
                 </label>
+                {!!c.forSale && c.ownerId === user?.id && (
+                  <button onClick={() => void markSold(c.copyId)} className="rounded-md border border-ink-700 px-2.5 py-1 text-xs text-ink-300 hover:border-wax hover:text-ink-100">
+                    Mark as sold
+                  </button>
+                )}
                 {!!c.forSale && <PriceInput copy={c} currency={user?.currency ?? 'USD'} onSave={(askingPrice) => void patch(c.copyId, { askingPrice })} />}
                 {c.ownerId === user?.id ? (
                   friends.length > 0 && (

@@ -5,6 +5,7 @@ import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { logger } from 'hono/logger'
 import { ensureAdmin, purgeExpiredSessions } from './auth.js'
+import { purgeOldEvents } from './events.js'
 import { config } from './config.js'
 import { migrate } from './db.js'
 import { adminRoutes } from './routes/admin.js'
@@ -22,6 +23,8 @@ migrate()
 await ensureAdmin()
 purgeExpiredSessions()
 setInterval(purgeExpiredSessions, 6 * 3_600_000).unref()
+purgeOldEvents()
+setInterval(purgeOldEvents, 24 * 3_600_000).unref()
 
 const app = new Hono()
 app.use('/api/*', logger())

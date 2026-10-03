@@ -44,6 +44,23 @@ friendRoutes.get('/', (c) => {
   return c.json({ friends })
 })
 
+// What friends have recently added, wishlisted, put up for sale and sold. Only what each friend shares:
+// wishlist events need the wishlist setting, the rest need the collection setting, and everyone can opt out
+// of the feed entirely. No prices or grades.
+friendRoutes.get('/feed', (c) => {
+  const events = db
+    .prepare(
+      `SELECT e.id, e.type, e.created_at AS createdAt, u.id AS userId, u.name AS userName,
+              r.id AS releaseId, r.title, r.artist, r.has_cover AS hasCover
+       FROM events e JOIN users u ON u.id = e.user_id JOIN releases r ON r.id = e.release_id
+       WHERE e.user_id != ? AND u.disabled = 0 AND u.share_activity = 1
+         AND ((e.type = 'wishlisted' AND u.share_wishlist = 1) OR (e.type != 'wishlisted' AND u.share_collection = 1))
+       ORDER BY e.created_at DESC, e.id DESC LIMIT 40`,
+    )
+    .all(c.get('user').id)
+  return c.json({ events })
+})
+
 const ITEM_COLUMNS = `r.id AS releaseId, r.title, r.artist, r.year, r.country, r.label, r.catno, r.format,
                       r.has_cover AS hasCover`
 const ORDER = 'ORDER BY r.artist COLLATE NOCASE, r.year, r.title COLLATE NOCASE'

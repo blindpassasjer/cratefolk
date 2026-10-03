@@ -93,7 +93,7 @@ function addCopy(releaseId: number, notes: string | null = null, grades: Partial
 on('GET', '/auth/me', () => {
   const s = load()
   if (!s.signedIn) fail('Not signed in', 401)
-  return { user: { id: 1, email: s.me.email, name: s.me.name, role: 'admin', currency: s.me.currency, shareCollection: s.me.shareCollection ? 1 : 0, shareWishlist: s.me.shareWishlist ? 1 : 0 } }
+  return { user: { id: 1, email: s.me.email, name: s.me.name, role: 'admin', currency: s.me.currency, shareCollection: s.me.shareCollection ? 1 : 0, shareWishlist: s.me.shareWishlist ? 1 : 0, shareActivity: s.me.shareActivity === false ? 0 : 1 } }
 })
 on('POST', '/auth/login', () => {
   load().signedIn = true // the demo accepts any credentials
@@ -110,6 +110,7 @@ on('PATCH', '/auth/me', (_m, _q, b) => {
   if (typeof b.currency === 'string') me.currency = b.currency
   if (typeof b.shareCollection === 'boolean') me.shareCollection = b.shareCollection
   if (typeof b.shareWishlist === 'boolean') me.shareWishlist = b.shareWishlist
+  if (typeof b.shareActivity === 'boolean') me.shareActivity = b.shareActivity
   return { ok: true }
 })
 on('POST', '/auth/password', () => ({ ok: true }))
@@ -394,6 +395,30 @@ on('GET', '/shared/:token', (m) => {
 // The demo has a single real user, so there is nobody else's collection to browse.
 on('GET', '/friends', () => ({ friends: [] }))
 on('GET', '/friends/users', () => ({ users: load().users.filter((u) => u.id !== 1).map((u) => ({ id: u.id, name: u.name })) }))
+
+// Made-up friends so the demo's feed has something to show. Times are relative to now.
+const DEMO_FEED: Array<[user: string, type: 'added' | 'wishlisted' | 'listed' | 'sold', releaseId: number, minutesAgo: number]> = [
+  ['Maya', 'added', 1005, 12],
+  ['Sam', 'listed', 1003, 55],
+  ['Jonas', 'wishlisted', 1009, 3 * 60],
+  ['Maya', 'sold', 1006, 7 * 60],
+  ['Sam', 'added', 1001, 26 * 60],
+  ['Jonas', 'listed', 1004, 2 * 24 * 60],
+  ['Maya', 'wishlisted', 1002, 3 * 24 * 60],
+]
+on('GET', '/friends/feed', () => ({
+  events: DEMO_FEED.map(([userName, type, releaseId, minutesAgo], i) => {
+    const r = release(releaseId)
+    return { id: i + 1, type, createdAt: Date.now() - minutesAgo * 60_000, userId: 100 + i, userName, releaseId, title: r.title, artist: r.artist, hasCover: r.hasCover }
+  }),
+}))
+on('POST', '/collection/:id/sold', (m) => {
+  const s = load()
+  const c = ownedCopy(m[1])
+  s.copies = s.copies.filter((x) => x !== c)
+  s.groupCopies = s.groupCopies.filter((g) => g.copyId !== c.id)
+  return { ok: true }
+})
 
 // ---- admin ----
 let demoRegistrationOpen = false

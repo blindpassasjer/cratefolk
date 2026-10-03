@@ -181,6 +181,19 @@ const migrations: string[] = [
   ALTER TABLE users ADD COLUMN share_collection INTEGER NOT NULL DEFAULT 0;
   ALTER TABLE users ADD COLUMN share_wishlist INTEGER NOT NULL DEFAULT 0;
   `,
+  `
+  -- What people add, wishlist, put up for sale and sell, for the friends feed. Only Discogs releases are logged.
+  CREATE TABLE events (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    type       TEXT NOT NULL CHECK (type IN ('added', 'wishlisted', 'listed', 'sold')),
+    release_id INTEGER NOT NULL REFERENCES releases(id) ON DELETE CASCADE,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX events_created_at ON events(created_at);
+  -- Opt-out: leave this user's activity out of other users' feeds (it only appears if they also share their collection or wishlist).
+  ALTER TABLE users ADD COLUMN share_activity INTEGER NOT NULL DEFAULT 1;
+  `,
 ]
 
 fs.mkdirSync(config.dataDir, { recursive: true })

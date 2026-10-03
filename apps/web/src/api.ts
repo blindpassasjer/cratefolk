@@ -38,9 +38,10 @@ export interface User {
   currency: string
   shareCollection: number
   shareWishlist: number
+  shareActivity: number
 }
 
-export interface AdminUser extends Omit<User, 'shareCollection' | 'shareWishlist'> {
+export interface AdminUser extends Omit<User, 'shareCollection' | 'shareWishlist' | 'shareActivity'> {
   disabled: number
   createdAt: string
 }

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.0 (2026-10-03)
+
+### Added
+- **Friends' activity feed.** A collapsible "Friends' activity" section at the bottom of the sidebar shows what friends recently added, wishlisted, put up for sale and sold, with covers and how long ago. A badge shows how many items are new since you last opened it. You only see activity for what each friend shares (wishlist events need their wishlist setting, the rest their collection setting), and never prices or grades. Records added by hand are never shown. The feed keeps the last 90 days.
+- **Opt out of the feed.** Account → Sharing has a new checkbox to leave your activity out of other people's feeds. It is on by default, only matters if you share your collection or wishlist, and hides your past activity too.
+- **Mark as sold.** A copy that is for sale now has a "Mark as sold" button on its record page. It removes the copy from your collection (and from a co-owner's) and posts "sold" to the feed.
+- The demo has made-up feed entries.
+
+### Upgrading
+Database migrations run automatically on start (a new events table and a sharing preference). Back up `data/` first: older versions can't read a migrated database.
+
 ## 0.4.2 (2026-10-03)
 
 ### Added

@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { requireUser, type AppEnv } from '../auth.js'
 import { db } from '../db.js'
 import { DiscogsError } from '../discogs.js'
+import { logEvent } from '../events.js'
 import { triviaFor } from '../trivia.js'
 import { canAccessRelease, coverPath, createManualRelease, deleteManualRelease, ensureRelease, isCreator, updateManualRelease } from '../releases.js'
 
@@ -74,6 +75,7 @@ collectionRoutes.post('/', async (c) => {
       )
       .run(userId, releaseId, mediaCondition ?? null, sleeveCondition ?? null, notes ?? null)
   })()
+  logEvent(userId, 'added', releaseId)
   const copy = withIds(db.prepare(`${COPY_SELECT} WHERE c.id = ?`).get(info.lastInsertRowid))
   return c.json({ copy }, 201)
 })
@@ -94,7 +96,7 @@ collectionRoutes.patch('/:id', async (c) => {
   const parsed = patchSchema.safeParse(await c.req.json().catch(() => null))
   if (!Number.isInteger(id) || !parsed.success) return c.json({ error: 'Invalid request' }, 400)
   const me = c.get('user').id
-  const copy = db.prepare('SELECT user_id AS ownerId FROM copies WHERE id = ? AND (user_id = ? OR co_owner_id = ?)').get(id, me, me) as { ownerId: number } | undefined
+  const copy = db.prepare('SELECT user_id AS ownerId, release_id AS releaseId, for_sale AS forSale FROM copies WHERE id = ? AND (user_id = ? OR co_owner_id = ?)').get(id, me, me) as { ownerId: number; releaseId: number; forSale: number } | undefined
   if (!copy) return c.json({ error: 'Copy not found' }, 404)
 
   const { mediaCondition, sleeveCondition, notes, forSale, askingPrice, coOwnerId } = parsed.data
@@ -108,7 +110,10 @@ collectionRoutes.patch('/:id', async (c) => {
   if (mediaCondition !== undefined) db.prepare('UPDATE copies SET media_condition = ? WHERE id = ?').run(mediaCondition, id)
   if (sleeveCondition !== undefined) db.prepare('UPDATE copies SET sleeve_condition = ? WHERE id = ?').run(sleeveCondition, id)
   if (notes !== undefined) db.prepare('UPDATE copies SET notes = ? WHERE id = ?').run(notes, id)
-  if (forSale !== undefined) db.prepare('UPDATE copies SET for_sale = ? WHERE id = ?').run(forSale ? 1 : 0, id)
+  if (forSale !== undefined) {
+    db.prepare('UPDATE copies SET for_sale = ? WHERE id = ?').run(forSale ? 1 : 0, id)
+    if (forSale && !copy.forSale) logEvent(me, 'listed', copy.releaseId)
+  }
   if (askingPrice !== undefined) {
     // The price is recorded in the owner's current currency so it stays meaningful if they switch later.
     db.prepare('UPDATE copies SET asking_price = ?, price_currency = ? WHERE id = ?').run(
@@ -118,6 +123,19 @@ collectionRoutes.patch('/:id', async (c) => {
     )
   }
   return c.json({ copy: withIds(db.prepare(`${COPY_SELECT} WHERE c.id = ?`).get(id)) })
+})
+
+// Selling a copy takes it out of the collection (for a shared copy, out of both) and tells friends it's gone.
+collectionRoutes.post('/:id/sold', (c) => {
+  const id = Number(c.req.param('id'))
+  const me = c.get('user').id
+  const copy = db.prepare('SELECT release_id AS releaseId FROM copies WHERE id = ? AND user_id = ?').get(id, me) as { releaseId: number } | undefined
+  if (!copy) return c.json({ error: 'Copy not found' }, 404)
+  db.transaction(() => {
+    db.prepare('DELETE FROM copies WHERE id = ?').run(id)
+    logEvent(me, 'sold', copy.releaseId)
+  })()
+  return c.json({ ok: true })
 })
 
 // The person who added a shared copy deletes it for both; the co-owner can only step away from it.

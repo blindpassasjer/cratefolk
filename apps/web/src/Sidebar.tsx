@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-do
 import { api, type CollectionGroup } from './api'
 import { useAuth } from './auth'
 import { useCrates } from './crates'
+import Feed from './Feed'
 import { Logo } from './Logo'
 import ManageCollections from './ManageCollections'
 import { useToast } from './notify'
@@ -139,6 +140,8 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
             </Link>
           </div>
         </nav>
+
+        <Feed onNavigate={onClose} />
 
         <div className="shrink-0 space-y-0.5 border-t border-ink-800 p-3 lg:hidden">
           <Link to="/account" onClick={onClose} className={item(pathname === '/account')}>
