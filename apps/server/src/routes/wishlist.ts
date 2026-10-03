@@ -103,8 +103,8 @@ statusRoutes.get('/', (c) => {
   const marks = ids.map(() => '?').join(',')
   const userId = c.get('user').id
   const owned = db
-    .prepare(`SELECT release_id AS id, COUNT(*) AS n FROM copies WHERE user_id = ? AND release_id IN (${marks}) GROUP BY release_id`)
-    .all(userId, ...ids) as Array<{ id: number; n: number }>
+    .prepare(`SELECT release_id AS id, COUNT(*) AS n FROM copies WHERE (user_id = ? OR co_owner_id = ?) AND release_id IN (${marks}) GROUP BY release_id`)
+    .all(userId, userId, ...ids) as Array<{ id: number; n: number }>
   const wished = db
     .prepare(`SELECT release_id AS id FROM wishlist WHERE user_id = ? AND release_id IN (${marks})`)
     .all(userId, ...ids) as Array<{ id: number }>

@@ -229,7 +229,7 @@ function dataFacts(r: ReleaseRow, userId: number): string[] {
   if (tags.length) facts.push(`Filed under ${tags.join(', ')}.`)
 
   const owned = (
-    db.prepare('SELECT COUNT(*) AS n FROM copies c JOIN releases x ON x.id = c.release_id WHERE c.user_id = ? AND x.artist = ? COLLATE NOCASE').get(userId, r.artist) as { n: number }
+    db.prepare('SELECT COUNT(*) AS n FROM copies c JOIN releases x ON x.id = c.release_id WHERE (c.user_id = ? OR c.co_owner_id = ?) AND x.artist = ? COLLATE NOCASE').get(userId, userId, r.artist) as { n: number }
   ).n
   if (owned > 1) facts.push(`You have ${owned} records by ${r.artist} in your collection.`)
 

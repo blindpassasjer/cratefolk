@@ -90,12 +90,12 @@ exportRoutes.get('/collection.xlsx', async (c) => {
               (SELECT group_concat(g.name, ', ') FROM collection_copies cc JOIN collections g ON g.id = cc.collection_id
                WHERE cc.copy_id = c.id) AS collections
        FROM copies c JOIN releases r ON r.id = c.release_id
-       WHERE c.user_id = ?
+       WHERE (c.user_id = ? OR c.co_owner_id = ?)
        ${groupId ? 'AND c.id IN (SELECT copy_id FROM collection_copies WHERE collection_id = ?)' : ''}
        ${forSale ? 'AND c.for_sale = 1' : ''}
        ORDER BY r.artist COLLATE NOCASE, r.year, r.title COLLATE NOCASE`,
     )
-    .all(...(groupId ? [userId, groupId] : [userId])) as Row[]
+    .all(...(groupId ? [userId, userId, groupId] : [userId, userId])) as Row[]
 
   const columns: Column[] = [
     ...COMMON,

@@ -5,11 +5,11 @@ import ManualRecord from './ManualRecord'
 import { useDialog, useToast } from './notify'
 
 type Mode = 'q' | 'catno' | 'barcode'
-const MODES: Array<{ id: Mode; label: string; placeholder: string }> = [
-  { id: 'q', label: 'Search', placeholder: 'Artist, album, label…' },
-  { id: 'catno', label: 'Catalog #', placeholder: 'e.g. PB 41447' },
-  { id: 'barcode', label: 'Barcode', placeholder: 'e.g. 5012394144777' },
-]
+
+// One search box: a run of 8-14 digits is a barcode, anything else is free text, which Discogs also matches
+// against catalog numbers. If free text finds nothing we retry it as an exact catalog number.
+const BARCODE = /^\d{8,14}$/
+const modeFor = (term: string): Mode => (BARCODE.test(term.replace(/[\s-]/g, '')) ? 'barcode' : 'q')
 
 export default function AddRecord({
   onClose,
@@ -21,7 +21,6 @@ export default function AddRecord({
   defaultTarget?: 'collection' | 'wishlist'
 }) {
   const [manual, setManual] = useState(false)
-  const [mode, setMode] = useState<Mode>('q')
   const [term, setTerm] = useState('')
   const [allFormats, setAllFormats] = useState(false)
   const [data, setData] = useState<SearchResponse | null>(null)
@@ -46,9 +45,16 @@ export default function AddRecord({
     const mine = ++latest.current
     setLoading(true)
     try {
-      const qs = new URLSearchParams({ [params.mode]: params.term, page: String(page) })
-      if (params.allFormats) qs.set('allFormats', '1')
-      const res = await api<SearchResponse>(`/discogs/search?${qs}`)
+      const fetchPage = (mode: Mode, term: string) => {
+        const qs = new URLSearchParams({ [mode]: term, page: String(page) })
+        if (params.allFormats) qs.set('allFormats', '1')
+        return api<SearchResponse>(`/discogs/search?${qs}`)
+      }
+      let res = await fetchPage(params.mode, params.mode === 'barcode' ? params.term.replace(/[\s-]/g, '') : params.term)
+      if (params.mode === 'q' && res.results.length === 0) {
+        const byCatno = await fetchPage('catno', params.term)
+        if (byCatno.results.length > 0) res = byCatno
+      }
       const status = await api<Status>(`/status?ids=${res.results.map((r) => r.id).join(',')}`)
       if (mine !== latest.current) return // a newer search or page was requested meanwhile
       setStatus(status)
@@ -63,7 +69,7 @@ export default function AddRecord({
 
   function submit(e: FormEvent) {
     e.preventDefault()
-    if (term.trim()) void run({ mode, term: term.trim(), allFormats }, 1)
+    if (term.trim()) void run({ mode: modeFor(term.trim()), term: term.trim(), allFormats }, 1)
   }
 
   async function add(r: SearchResult, target: 'collection' | 'wishlist') {
@@ -93,8 +99,6 @@ export default function AddRecord({
     }
   }
 
-  const current = MODES.find((m) => m.id === mode)!
-
   return (
     <div className="fixed inset-0 z-20 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm sm:pt-[8vh]" onMouseDown={(e) => !manual && e.target === e.currentTarget && onClose()}>
       {manual ? (
@@ -109,25 +113,13 @@ export default function AddRecord({
         </div>
 
         <form onSubmit={submit} className="space-y-3 border-b border-ink-800 p-4">
-          <div className="flex gap-1">
-            {MODES.map((m) => (
-              <button
-                type="button"
-                key={m.id}
-                onClick={() => setMode(m.id)}
-                className={`rounded-md px-3 py-1 text-sm ${mode === m.id ? 'bg-ink-700 text-ink-100' : 'text-ink-300 hover:text-ink-100'}`}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
           <div className="flex gap-2">
             <div className="relative min-w-0 flex-1">
               <input
                 ref={inputRef}
                 value={term}
                 onChange={(e) => setTerm(e.target.value)}
-                placeholder={current.placeholder}
+                placeholder="Artist, album, label, catalog # or barcode…"
                 className="w-full rounded-md border border-ink-700 bg-ink-950 py-2 pl-3 pr-8 text-sm outline-none focus:border-wax"
               />
               {term && (

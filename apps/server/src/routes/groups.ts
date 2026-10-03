@@ -17,8 +17,8 @@ const nameSchema = z.object({ name: z.string().trim().min(1).max(60) })
 groupRoutes.get('/', (c) => {
   const userId = c.get('user').id
   const totals = db
-    .prepare('SELECT COUNT(*) AS records, COALESCE(SUM(for_sale), 0) AS forSale FROM copies WHERE user_id = ?')
-    .get(userId)
+    .prepare('SELECT COUNT(*) AS records, COALESCE(SUM(for_sale), 0) AS forSale FROM copies WHERE user_id = ? OR co_owner_id = ?')
+    .get(userId, userId)
   return c.json({ collections: db.prepare(`${GROUP_SELECT} WHERE g.user_id = ? ORDER BY g.name`).all(userId), totals })
 })
 

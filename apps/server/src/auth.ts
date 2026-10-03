@@ -23,6 +23,8 @@ interface SessionUser {
   name: string
   role: 'admin' | 'user'
   currency: string
+  shareCollection: number
+  shareWishlist: number
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -77,7 +79,8 @@ function lookupUser(c: Context): SessionUser | null {
   if (!token) return null
   const row = db
     .prepare(
-      `SELECT u.id, u.email, u.name, u.role, u.currency
+      `SELECT u.id, u.email, u.name, u.role, u.currency,
+              u.share_collection AS shareCollection, u.share_wishlist AS shareWishlist
        FROM sessions s JOIN users u ON u.id = s.user_id
        WHERE s.token_hash = ? AND s.expires_at > ? AND u.disabled = 0`,
     )

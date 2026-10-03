@@ -122,12 +122,13 @@ export interface StoredCopy {
   forSale: boolean
   askingPrice: number | null
   priceCurrency: string | null
+  coOwnerId?: number | null
 }
 
 export interface DemoState {
   nextId: number
   signedIn: boolean
-  me: { name: string; email: string; currency: string }
+  me: { name: string; email: string; currency: string; shareCollection?: boolean; shareWishlist?: boolean }
   copies: StoredCopy[]
   wishlist: Array<{ id: number; releaseId: number; notes: string | null; addedAt: string }>
   groups: Array<{ id: number; name: string }>

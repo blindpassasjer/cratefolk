@@ -71,6 +71,10 @@ function copyRow(c: StoredCopy): Copy {
     askingPrice: c.askingPrice,
     priceCurrency: c.priceCurrency,
     collectionIds: s.groupCopies.filter((g) => g.copyId === c.id).map((g) => g.groupId),
+    ownerId: 1,
+    coOwnerId: c.coOwnerId ?? null,
+    ownerName: s.me.name,
+    coOwnerName: s.users.find((u) => u.id === c.coOwnerId)?.name ?? null,
   }
 }
 
@@ -89,7 +93,7 @@ function addCopy(releaseId: number, notes: string | null = null, grades: Partial
 on('GET', '/auth/me', () => {
   const s = load()
   if (!s.signedIn) fail('Not signed in', 401)
-  return { user: { id: 1, email: s.me.email, name: s.me.name, role: 'admin', currency: s.me.currency } }
+  return { user: { id: 1, email: s.me.email, name: s.me.name, role: 'admin', currency: s.me.currency, shareCollection: s.me.shareCollection ? 1 : 0, shareWishlist: s.me.shareWishlist ? 1 : 0 } }
 })
 on('POST', '/auth/login', () => {
   load().signedIn = true // the demo accepts any credentials
@@ -104,6 +108,8 @@ on('PATCH', '/auth/me', (_m, _q, b) => {
   if (typeof b.name === 'string') me.name = b.name
   if (typeof b.email === 'string') me.email = b.email.toLowerCase()
   if (typeof b.currency === 'string') me.currency = b.currency
+  if (typeof b.shareCollection === 'boolean') me.shareCollection = b.shareCollection
+  if (typeof b.shareWishlist === 'boolean') me.shareWishlist = b.shareWishlist
   return { ok: true }
 })
 on('POST', '/auth/password', () => ({ ok: true }))
@@ -131,6 +137,7 @@ on('PATCH', '/collection/:id', (m, _q, b) => {
   if ('sleeveCondition' in b) c.sleeveCondition = (b.sleeveCondition as string | null) ?? null
   if ('notes' in b) c.notes = (b.notes as string | null) ?? null
   if (typeof b.forSale === 'boolean') c.forSale = b.forSale
+  if ('coOwnerId' in b) c.coOwnerId = (b.coOwnerId as number | null) ?? null
   if ('askingPrice' in b) {
     c.askingPrice = (b.askingPrice as number | null) ?? null
     c.priceCurrency = c.askingPrice === null ? null : load().me.currency
@@ -382,6 +389,11 @@ on('GET', '/shared/:token', (m) => {
   const title = share.kind === 'group' ? (s.groups.find((g) => g.id === share.groupId)?.name ?? 'Collection') : 'Collection'
   return { title, owner, kind: share.kind, items }
 })
+
+// ---- members ----
+// The demo has a single real user, so there is nobody else's collection to browse.
+on('GET', '/members', () => ({ members: [] }))
+on('GET', '/members/users', () => ({ users: load().users.filter((u) => u.id !== 1).map((u) => ({ id: u.id, name: u.name })) }))
 
 // ---- admin ----
 let demoRegistrationOpen = false

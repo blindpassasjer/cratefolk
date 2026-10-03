@@ -11,17 +11,23 @@ fs.mkdirSync(coversDir, { recursive: true })
 export const coverPath = (id: number) => path.join(coversDir, `${id}.jpg`)
 
 /** Discogs releases are shared by everyone; a record added by hand (negative ID) only by its creator. */
-export function canAccessRelease(id: number, userId: number): boolean {
-  if (id > 0) return true
+/** Whether this user created the record by hand. Only the creator can edit or delete it, or add copies of it. */
+export function isCreator(id: number, userId: number): boolean {
   const row = db.prepare('SELECT owner_id AS ownerId FROM releases WHERE id = ?').get(id) as { ownerId: number | null } | undefined
   return !!row && row.ownerId === userId
+}
+
+/** Whether this user can view the release: any Discogs record, or a hand-added one they created or co-own a copy of. */
+export function canAccessRelease(id: number, userId: number): boolean {
+  if (id > 0) return true
+  return isCreator(id, userId) || !!db.prepare('SELECT 1 FROM copies WHERE release_id = ? AND co_owner_id = ?').get(id, userId)
 }
 
 /** Returns once the release is in the local cache, fetching it from Discogs on first use. */
 export async function ensureRelease(id: number, userId: number): Promise<void> {
   if (id < 0) {
     // Manually entered records have negative IDs, don't exist on Discogs, and are private to their creator.
-    if (!canAccessRelease(id, userId)) throw new DiscogsError('Release not found', 404)
+    if (!isCreator(id, userId)) throw new DiscogsError('Release not found', 404)
     return
   }
   if (db.prepare('SELECT 1 FROM releases WHERE id = ?').get(id)) return

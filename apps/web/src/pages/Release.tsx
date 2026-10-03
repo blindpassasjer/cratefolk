@@ -1,4 +1,4 @@
-import { ArrowLeft, Heart, Lightbulb, Pencil, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Heart, Lightbulb, Pencil, Plus, Trash2, Users } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../auth'
@@ -47,6 +47,7 @@ export default function Release() {
   const [error, setError] = useState<string | null>(null)
   const [trivia, setTrivia] = useState<Trivia | null>(null)
   const { groups, refresh } = useCrates()
+  const [members, setMembers] = useState<Array<{ id: number; name: string }>>([])
   const [editing, setEditing] = useState(false)
   const toast = useToast()
   const { confirm } = useDialog()
@@ -65,6 +66,12 @@ export default function Release() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    api<{ users: Array<{ id: number; name: string }> }>('/members/users')
+      .then((r) => setMembers(r.users))
+      .catch(() => {})
+  }, [])
 
   // Trivia is a bonus fetched on its own, so a slow or failed Wikipedia lookup never delays the page.
   useEffect(() => {
@@ -88,7 +95,7 @@ export default function Release() {
     }
   }
 
-  const patch = (copyId: number, body: Partial<Pick<OwnedCopy, 'mediaCondition' | 'sleeveCondition' | 'notes' | 'askingPrice'>> & { forSale?: boolean }) =>
+  const patch = (copyId: number, body: Partial<Pick<OwnedCopy, 'mediaCondition' | 'sleeveCondition' | 'notes' | 'askingPrice' | 'coOwnerId'>> & { forSale?: boolean }) =>
     act(() => api(`/collection/${copyId}`, { method: 'PATCH', json: body }), 'Saved')
 
   const addCopy = () =>
@@ -100,6 +107,20 @@ export default function Release() {
       : act(() => api('/wishlist', { method: 'POST', json: { releaseId: Number(id) } }), 'Added to your wishlist')
 
   async function remove(copyId: number) {
+    const mine = data?.copies.find((c) => c.copyId === copyId)
+    if (mine && mine.ownerId !== user?.id) {
+      const leave = await confirm({
+        title: 'Remove this from your collection?',
+        message: `${mine.ownerName} added this copy. It stays in their collection, and just stops being shared with you.`,
+        confirmLabel: 'Remove',
+        danger: true,
+      })
+      if (leave) {
+        await act(() => api(`/collection/${copyId}`, { method: 'DELETE' }), 'Removed from your collection')
+        if (data?.copies.length === 1) navigate('/', { replace: true })
+      }
+      return
+    }
     const last = data?.copies.length === 1
     // A hand-added record with no copies and no wishlist entry would be unreachable, so it goes with its last copy.
     const withRecord = last && Number(id) < 0 && !data?.wishlisted
@@ -107,7 +128,9 @@ export default function Release() {
       title: withRecord ? 'Remove this record?' : 'Remove this copy?',
       message: withRecord
         ? 'This record you added by hand will be deleted along with its only copy. This cannot be undone.'
-        : 'It will be taken out of your collection and any crates it is in.',
+        : mine?.coOwnerId
+          ? `It will be deleted from ${mine.coOwnerName}'s collection too.`
+          : 'It will be taken out of your collection and any crates it is in.',
       confirmLabel: withRecord ? 'Delete record' : 'Remove copy',
       danger: true,
     })
@@ -272,8 +295,32 @@ export default function Release() {
                   For sale
                 </label>
                 {!!c.forSale && <PriceInput copy={c} currency={user?.currency ?? 'USD'} onSave={(askingPrice) => void patch(c.copyId, { askingPrice })} />}
+                {c.ownerId === user?.id ? (
+                  members.length > 0 && (
+                    <label className="flex items-center gap-2 text-ink-500">
+                      <Users className="size-4" aria-hidden="true" />
+                      Shared with
+                      <select
+                        className={select}
+                        value={c.coOwnerId ?? ''}
+                        onChange={(e) => void patch(c.copyId, { coOwnerId: e.target.value ? Number(e.target.value) : null })}
+                      >
+                        <option value="">Nobody</option>
+                        {members.map((m) => (
+                          <option key={m.id} value={m.id}>{m.name}</option>
+                        ))}
+                      </select>
+                    </label>
+                  )
+                ) : (
+                  <span className="flex items-center gap-1.5 text-ink-500">
+                    <Users className="size-4" aria-hidden="true" /> Shared by {c.ownerName}
+                  </span>
+                )}
                 <span className="flex-1 text-xs text-ink-500">Added {c.addedAt.slice(0, 10)}</span>
-                <CollectionPicker variant="inline" copyId={c.copyId} selected={c.collectionIds} groups={groups} onChanged={() => void load()} />
+                {c.ownerId === user?.id && (
+                  <CollectionPicker variant="inline" copyId={c.copyId} selected={c.collectionIds} groups={groups} onChanged={() => void load()} />
+                )}
                 <button onClick={() => void remove(c.copyId)} className="text-ink-500 hover:text-danger" aria-label="Remove copy">
                   <Trash2 className="size-4" />
                 </button>

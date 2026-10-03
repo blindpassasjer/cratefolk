@@ -36,9 +36,11 @@ export interface User {
   name: string
   role: 'admin' | 'user'
   currency: string
+  shareCollection: number
+  shareWishlist: number
 }
 
-export interface AdminUser extends User {
+export interface AdminUser extends Omit<User, 'shareCollection' | 'shareWishlist'> {
   disabled: number
   createdAt: string
 }
@@ -66,6 +68,11 @@ export interface Copy {
   forSale: number
   askingPrice: number | null
   priceCurrency: string | null
+  /** Who added the copy, and who else owns it, if anyone. */
+  ownerId: number
+  coOwnerId: number | null
+  ownerName: string
+  coOwnerName: string | null
 }
 
 export interface SearchResult {
@@ -115,9 +122,9 @@ export interface Trivia {
   url: string | null
 }
 
-export type OwnedCopy = Pick<Copy, 'copyId' | 'mediaCondition' | 'sleeveCondition' | 'notes' | 'addedAt' | 'collectionIds' | 'forSale' | 'askingPrice' | 'priceCurrency'>
+export type OwnedCopy = Pick<Copy, 'copyId' | 'mediaCondition' | 'sleeveCondition' | 'notes' | 'addedAt' | 'collectionIds' | 'forSale' | 'askingPrice' | 'priceCurrency' | 'ownerId' | 'coOwnerId' | 'ownerName' | 'coOwnerName'>
 
-export type WishItem = Omit<Copy, 'copyId' | 'mediaCondition' | 'sleeveCondition' | 'collectionIds' | 'forSale' | 'askingPrice' | 'priceCurrency'> & { wishId: number }
+export type WishItem = Omit<Copy, 'copyId' | 'mediaCondition' | 'sleeveCondition' | 'collectionIds' | 'forSale' | 'askingPrice' | 'priceCurrency' | 'ownerId' | 'coOwnerId' | 'ownerName' | 'coOwnerName'> & { wishId: number }
 
 export interface Status {
   owned: Record<number, number>

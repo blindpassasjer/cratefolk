@@ -35,9 +35,9 @@ statsRoutes.get('/', (c) => {
       `SELECT c.release_id AS releaseId, c.added_at AS addedAt, c.for_sale AS forSale, c.asking_price AS price,
               c.price_currency AS priceCurrency, r.title, r.artist, r.year, r.country, r.label, r.format, r.genres,
               r.has_cover AS hasCover
-       FROM copies c JOIN releases r ON r.id = c.release_id WHERE c.user_id = ? ORDER BY c.added_at DESC, c.id DESC`,
+       FROM copies c JOIN releases r ON r.id = c.release_id WHERE (c.user_id = ? OR c.co_owner_id = ?) ORDER BY c.added_at DESC, c.id DESC`,
     )
-    .all(user.id) as Array<{
+    .all(user.id, user.id) as Array<{
     releaseId: number; addedAt: string; forSale: number; price: number | null; priceCurrency: string | null
     title: string; artist: string; year: number | null; country: string | null; label: string | null
     format: string | null; genres: string; hasCover: number

@@ -5,7 +5,7 @@ import { requireUser, type AppEnv } from '../auth.js'
 import { db } from '../db.js'
 import { DiscogsError } from '../discogs.js'
 import { triviaFor } from '../trivia.js'
-import { canAccessRelease, coverPath, createManualRelease, deleteManualRelease, ensureRelease, updateManualRelease } from '../releases.js'
+import { canAccessRelease, coverPath, createManualRelease, deleteManualRelease, ensureRelease, isCreator, updateManualRelease } from '../releases.js'
 
 export const collectionRoutes = new Hono<AppEnv>()
 export const releaseRoutes = new Hono<AppEnv>()
@@ -19,6 +19,9 @@ const COPY_SELECT = `
   SELECT c.id AS copyId, c.release_id AS releaseId, c.media_condition AS mediaCondition,
          c.sleeve_condition AS sleeveCondition, c.notes, c.added_at AS addedAt,
          c.for_sale AS forSale, c.asking_price AS askingPrice, c.price_currency AS priceCurrency,
+         c.user_id AS ownerId, c.co_owner_id AS coOwnerId,
+         (SELECT name FROM users WHERE id = c.user_id) AS ownerName,
+         (SELECT name FROM users WHERE id = c.co_owner_id) AS coOwnerName,
          r.title, r.artist, r.year, r.country, r.label, r.catno, r.format, r.barcode, r.has_cover AS hasCover,
          (SELECT group_concat(collection_id) FROM collection_copies WHERE copy_id = c.id) AS collectionIds
   FROM copies c JOIN releases r ON r.id = c.release_id`
@@ -35,12 +38,12 @@ collectionRoutes.get('/', (c) => {
   const forSale = c.req.query('forSale') === '1'
   const rows = db
     .prepare(
-      `${COPY_SELECT} WHERE c.user_id = ?
+      `${COPY_SELECT} WHERE (c.user_id = ? OR c.co_owner_id = ?)
        ${groupId ? 'AND c.id IN (SELECT copy_id FROM collection_copies WHERE collection_id = ?)' : ''}
        ${forSale ? 'AND c.for_sale = 1' : ''}
        ORDER BY c.added_at DESC, c.id DESC`,
     )
-    .all(...(groupId ? [c.get('user').id, groupId] : [c.get('user').id]))
+    .all(...(groupId ? [c.get('user').id, c.get('user').id, groupId] : [c.get('user').id, c.get('user').id]))
   return c.json({ copies: rows.map(withIds) })
 })
 
@@ -82,6 +85,7 @@ const patchSchema = z
     notes: z.string().max(2000).nullable(),
     forSale: z.boolean(),
     askingPrice: z.number().positive().max(1_000_000).nullable(),
+    coOwnerId: z.number().int().positive().nullable(),
   })
   .partial()
 
@@ -89,10 +93,18 @@ collectionRoutes.patch('/:id', async (c) => {
   const id = Number(c.req.param('id'))
   const parsed = patchSchema.safeParse(await c.req.json().catch(() => null))
   if (!Number.isInteger(id) || !parsed.success) return c.json({ error: 'Invalid request' }, 400)
-  const owned = db.prepare('SELECT 1 FROM copies WHERE id = ? AND user_id = ?').get(id, c.get('user').id)
-  if (!owned) return c.json({ error: 'Copy not found' }, 404)
+  const me = c.get('user').id
+  const copy = db.prepare('SELECT user_id AS ownerId FROM copies WHERE id = ? AND (user_id = ? OR co_owner_id = ?)').get(id, me, me) as { ownerId: number } | undefined
+  if (!copy) return c.json({ error: 'Copy not found' }, 404)
 
-  const { mediaCondition, sleeveCondition, notes, forSale, askingPrice } = parsed.data
+  const { mediaCondition, sleeveCondition, notes, forSale, askingPrice, coOwnerId } = parsed.data
+  if (coOwnerId !== undefined) {
+    if (copy.ownerId !== me) return c.json({ error: 'Only the person who added this copy can change who it is shared with' }, 403)
+    if (coOwnerId !== null && (coOwnerId === me || !db.prepare('SELECT 1 FROM users WHERE id = ? AND disabled = 0').get(coOwnerId))) {
+      return c.json({ error: 'Choose another member to share this copy with' }, 400)
+    }
+    db.prepare('UPDATE copies SET co_owner_id = ? WHERE id = ?').run(coOwnerId, id)
+  }
   if (mediaCondition !== undefined) db.prepare('UPDATE copies SET media_condition = ? WHERE id = ?').run(mediaCondition, id)
   if (sleeveCondition !== undefined) db.prepare('UPDATE copies SET sleeve_condition = ? WHERE id = ?').run(sleeveCondition, id)
   if (notes !== undefined) db.prepare('UPDATE copies SET notes = ? WHERE id = ?').run(notes, id)
@@ -108,11 +120,14 @@ collectionRoutes.patch('/:id', async (c) => {
   return c.json({ copy: withIds(db.prepare(`${COPY_SELECT} WHERE c.id = ?`).get(id)) })
 })
 
+// The person who added a shared copy deletes it for both; the co-owner can only step away from it.
 collectionRoutes.delete('/:id', (c) => {
-  const res = db
-    .prepare('DELETE FROM copies WHERE id = ? AND user_id = ?')
-    .run(Number(c.req.param('id')), c.get('user').id)
-  return res.changes ? c.json({ ok: true }) : c.json({ error: 'Copy not found' }, 404)
+  const id = Number(c.req.param('id'))
+  const me = c.get('user').id
+  const res = db.prepare('DELETE FROM copies WHERE id = ? AND user_id = ?').run(id, me)
+  if (res.changes) return c.json({ ok: true })
+  const left = db.prepare('UPDATE copies SET co_owner_id = NULL WHERE id = ? AND co_owner_id = ?').run(id, me)
+  return left.changes ? c.json({ ok: true }) : c.json({ error: 'Copy not found' }, 404)
 })
 
 const text = (max: number) => z.string().trim().max(max).nullish().transform((v) => v || null)
@@ -170,7 +185,7 @@ releaseRoutes.post('/manual', async (c) => {
 })
 
 // Only the creator can edit or delete a record they added by hand.
-const manualOwned = (id: number, userId: number) => Number.isInteger(id) && id < 0 && canAccessRelease(id, userId)
+const manualOwned = (id: number, userId: number) => Number.isInteger(id) && id < 0 && isCreator(id, userId)
 
 releaseRoutes.patch('/:id', async (c) => {
   const id = Number(c.req.param('id'))
@@ -223,11 +238,13 @@ releaseRoutes.get('/:id', (c) => {
     .prepare(
       `SELECT id AS copyId, media_condition AS mediaCondition, sleeve_condition AS sleeveCondition,
               notes, added_at AS addedAt, for_sale AS forSale, asking_price AS askingPrice,
-              price_currency AS priceCurrency,
+              price_currency AS priceCurrency, user_id AS ownerId, co_owner_id AS coOwnerId,
+              (SELECT name FROM users WHERE id = copies.user_id) AS ownerName,
+              (SELECT name FROM users WHERE id = copies.co_owner_id) AS coOwnerName,
               (SELECT group_concat(collection_id) FROM collection_copies WHERE copy_id = copies.id) AS collectionIds
-       FROM copies WHERE release_id = ? AND user_id = ? ORDER BY id`,
+       FROM copies WHERE release_id = ? AND (user_id = ? OR co_owner_id = ?) ORDER BY id`,
     )
-    .all(id, c.get('user').id)
+    .all(id, c.get('user').id, c.get('user').id)
     .map(withIds)
   const wishlisted = db
     .prepare('SELECT id, notes FROM wishlist WHERE release_id = ? AND user_id = ?')

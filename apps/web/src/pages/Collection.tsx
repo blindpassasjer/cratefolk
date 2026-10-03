@@ -1,8 +1,9 @@
-import { Image, Pencil, Plus, Tag, Trash2 } from 'lucide-react'
+import { Image, Pencil, Plus, Tag, Trash2, Users } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import AddRecord from '../AddRecord'
 import { api, type Copy } from '../api'
+import { useAuth } from '../auth'
 import { money } from '../Market'
 import CollectionPicker from '../CollectionPicker'
 import Cover from '../Cover'
@@ -43,6 +44,7 @@ export default function Collection() {
   const [coverSize, setCoverSize] = useState(loadSize)
   const [error, setError] = useState<string | null>(null)
   const { groups, refresh, manage } = useCrates()
+  const { user } = useAuth()
 
   const active = groups.find((g) => g.id === activeId) ?? null
 
@@ -186,9 +188,20 @@ export default function Collection() {
                 {c.askingPrice != null && c.priceCurrency ? money(c.askingPrice, c.priceCurrency) : 'For sale'}
               </span>
             )}
-            <div className="absolute right-2 top-2">
-              <CollectionPicker copyId={c.copyId} selected={c.collectionIds} groups={groups} onChanged={() => void load()} />
-            </div>
+            {c.coOwnerId != null && (
+              <span
+                title={`Shared with ${c.ownerId === user?.id ? c.coOwnerName : c.ownerName}`}
+                className={`absolute left-2 flex items-center gap-1 rounded-md bg-black/70 px-1.5 py-0.5 text-xs text-white ${c.forSale ? 'top-8' : 'top-2'}`}
+              >
+                <Users className="size-3" /> Shared
+              </span>
+            )}
+            {/* Crates are personal, so a copy someone else added can't be filed into this user's crates. */}
+            {c.ownerId === user?.id && (
+              <div className="absolute right-2 top-2">
+                <CollectionPicker copyId={c.copyId} selected={c.collectionIds} groups={groups} onChanged={() => void load()} />
+              </div>
+            )}
           </div>
         ))}
       </div>

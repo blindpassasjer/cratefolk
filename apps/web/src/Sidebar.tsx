@@ -1,4 +1,4 @@
-import { Archive, BarChart3, Disc3, Heart, LogOut, Plus, Settings2, Tag, UserRound, X } from 'lucide-react'
+import { Archive, BarChart3, Disc3, Heart, LogOut, Plus, Settings2, Tag, UserRound, Users, X } from 'lucide-react'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { api, type CollectionGroup } from './api'
@@ -130,6 +130,9 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
           <div className="space-y-0.5 border-t border-ink-800 pt-3">
             <Link to="/wishlist" onClick={onClose} className={item(pathname === '/wishlist')}>
               <Heart className="size-4" /> Wishlist
+            </Link>
+            <Link to="/members" onClick={onClose} className={item(pathname.startsWith('/members'))}>
+              <Users className="size-4" /> Members
             </Link>
             <Link to="/stats" onClick={onClose} className={item(pathname === '/stats')}>
               <BarChart3 className="size-4" /> Stats

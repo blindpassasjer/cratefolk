@@ -65,6 +65,15 @@ export default function Account() {
     }
   }
 
+  async function saveSharing(patch: { shareCollection?: boolean; shareWishlist?: boolean }) {
+    try {
+      await api('/auth/me', { method: 'PATCH', json: patch })
+      await refresh()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not save your sharing settings')
+    }
+  }
+
   async function savePassword(e: FormEvent) {
     e.preventDefault()
     if (next !== confirm) return toast.error("The new passwords don't match")
@@ -128,6 +137,23 @@ export default function Account() {
               </div>
             </form>
           )}
+        </Card>
+
+        <Card title="Sharing" hint="Other members of this Cratelog can browse what you allow here. They only see which records you have, never your grades, notes or prices.">
+          {([
+            ['shareCollection', 'Let other members browse my collection'],
+            ['shareWishlist', 'Let other members see my wishlist'],
+          ] as const).map(([field, label]) => (
+            <label key={field} className="flex items-center gap-2 text-sm text-ink-300">
+              <input
+                type="checkbox"
+                className="accent-wax"
+                checked={!!user?.[field]}
+                onChange={(e) => void saveSharing({ [field]: e.target.checked })}
+              />
+              {label}
+            </label>
+          ))}
         </Card>
 
         <Card title="Preferences" hint="Marketplace prices on your wishlist are shown in this currency.">
