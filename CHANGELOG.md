@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- **Choose your shop links.** Account → Shop links lets you pick which shops get "Also search" links on your wishlist and record pages: eBay, Bandcamp, Amazon, Vinylpladen, Platekompaniet, FINN.no, Tradera, CDON, HHV, Deejay.de, Record Shop X, Juno, Rough Trade, Norman, Boomkat and Amoeba. The links open each shop's own search, so no prices are shown. eBay and Bandcamp stay on by default.
+
+### Upgrading
+A database migration runs automatically on start (a new shops preference). Back up `data/` first: older versions can't read a migrated database.
+
 ## 0.5.1 (2026-10-03)
 
 ### Added

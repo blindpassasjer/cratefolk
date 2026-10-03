@@ -2,6 +2,7 @@ import { useState, type FormEvent, type ReactNode } from 'react'
 import { api, CURRENCIES } from '../api'
 import { useAuth } from '../auth'
 import { useToast } from '../notify'
+import { SHOPS, parseShops } from '../Market'
 import AdminUsers from './AdminUsers'
 
 const input =
@@ -74,6 +75,17 @@ export default function Account() {
     }
   }
 
+  async function saveShops(id: string, on: boolean) {
+    const current = parseShops(user?.shops)
+    const shops = on ? [...current, id] : current.filter((s) => s !== id)
+    try {
+      await api('/auth/me', { method: 'PATCH', json: { shops: SHOPS.filter((s) => shops.includes(s.id)).map((s) => s.id) } })
+      await refresh()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not save your shops')
+    }
+  }
+
   async function savePassword(e: FormEvent) {
     e.preventDefault()
     if (next !== confirm) return toast.error("The new passwords don't match")
@@ -126,6 +138,27 @@ export default function Account() {
               ))}
             </select>
           </Field>
+        </Card>
+
+        <Card title="Shop links" hint="Shops to show quick search links for on your wishlist and record pages. These open the shop's own search, so no prices are shown.">
+          {(['Global', 'Nordic', 'Europe', 'UK & US'] as const).map((region) => (
+            <fieldset key={region} className="space-y-2">
+              <legend className="mb-1 text-xs font-medium uppercase tracking-wide text-ink-500">{region}</legend>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                {SHOPS.filter((s) => s.region === region).map((shop) => (
+                  <label key={shop.id} className="flex items-center gap-2 text-sm text-ink-300">
+                    <input
+                      type="checkbox"
+                      className="accent-wax"
+                      checked={parseShops(user?.shops).includes(shop.id)}
+                      onChange={(e) => void saveShops(shop.id, e.target.checked)}
+                    />
+                    {shop.name}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          ))}
         </Card>
           </div>
           <div className="space-y-6">

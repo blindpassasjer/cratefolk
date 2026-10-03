@@ -93,7 +93,7 @@ function addCopy(releaseId: number, notes: string | null = null, grades: Partial
 on('GET', '/auth/me', () => {
   const s = load()
   if (!s.signedIn) fail('Not signed in', 401)
-  return { user: { id: 1, email: s.me.email, name: s.me.name, role: 'admin', currency: s.me.currency, shareCollection: s.me.shareCollection ? 1 : 0, shareWishlist: s.me.shareWishlist ? 1 : 0, shareActivity: s.me.shareActivity === false ? 0 : 1 } }
+  return { user: { id: 1, email: s.me.email, name: s.me.name, role: 'admin', currency: s.me.currency, shareCollection: s.me.shareCollection ? 1 : 0, shareWishlist: s.me.shareWishlist ? 1 : 0, shareActivity: s.me.shareActivity === false ? 0 : 1, shops: s.me.shops ?? 'ebay,bandcamp' } }
 })
 on('POST', '/auth/login', () => {
   load().signedIn = true // the demo accepts any credentials
@@ -111,6 +111,7 @@ on('PATCH', '/auth/me', (_m, _q, b) => {
   if (typeof b.shareCollection === 'boolean') me.shareCollection = b.shareCollection
   if (typeof b.shareWishlist === 'boolean') me.shareWishlist = b.shareWishlist
   if (typeof b.shareActivity === 'boolean') me.shareActivity = b.shareActivity
+  if (Array.isArray(b.shops)) me.shops = b.shops.join(',')
   return { ok: true }
 })
 on('POST', '/auth/password', () => ({ ok: true }))

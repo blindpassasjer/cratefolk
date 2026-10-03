@@ -194,6 +194,10 @@ const migrations: string[] = [
   -- Opt-out: leave this user's activity out of other users' feeds (it only appears if they also share their collection or wishlist).
   ALTER TABLE users ADD COLUMN share_activity INTEGER NOT NULL DEFAULT 1;
   `,
+  `
+  -- Which shops to show "search" links for on wishlist and record pages (comma-separated ids; the list lives in the web app).
+  ALTER TABLE users ADD COLUMN shops TEXT NOT NULL DEFAULT 'ebay,bandcamp';
+  `,
 ]
 
 fs.mkdirSync(config.dataDir, { recursive: true })

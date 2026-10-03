@@ -39,9 +39,11 @@ export interface User {
   shareCollection: number
   shareWishlist: number
   shareActivity: number
+  /** Comma-separated ids of the shops to show search links for (see SHOPS in Market.tsx). */
+  shops: string
 }
 
-export interface AdminUser extends Omit<User, 'shareCollection' | 'shareWishlist' | 'shareActivity'> {
+export interface AdminUser extends Omit<User, 'shareCollection' | 'shareWishlist' | 'shareActivity' | 'shops'> {
   disabled: number
   createdAt: string
 }
