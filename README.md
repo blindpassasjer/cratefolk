@@ -141,16 +141,6 @@ Database migrations run automatically when the container starts. Releases are ta
 `latest` tag always points at the newest release, and you can pin a version in `docker-compose.yml`
 (for example `ghcr.io/blindpassasjer/cratelog:0.3.0`) if you prefer to upgrade deliberately.
 
-### Upgrading from WaxCrate (before 0.4.0)
-
-Cratelog is the new name of WaxCrate. Your data carries over untouched:
-
-1. Back up your `data/` folder.
-2. In `docker-compose.yml`, change the image to `ghcr.io/blindpassasjer/cratelog:latest` (the old `waxcrate` image no longer receives updates). If you cloned the repo, `git pull` does this for you.
-3. Run `docker compose pull && docker compose up -d --remove-orphans`.
-
-On first start `data/waxcrate.db` is renamed to `data/cratelog.db`, and people stay signed in. Your `.env` and the `./data:/data` mount stay as they are. If a reverse proxy points at the old service name, either update it or keep calling the service `waxcrate` in your compose file.
-
 ### Where your data lives
 
 Everything is stored in a plain folder next to your `docker-compose.yml`, not in an opaque Docker
