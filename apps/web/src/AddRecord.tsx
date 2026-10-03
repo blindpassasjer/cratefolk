@@ -1,6 +1,7 @@
-import { Check, Disc3, Heart, Loader2, Search, X } from 'lucide-react'
+import { Check, Disc3, Heart, Loader2, ScanBarcode, Search, X } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { api, type SearchResponse, type SearchResult, type Status } from './api'
+import { api, IS_DEMO, type SearchResponse, type SearchResult, type Status } from './api'
+import BarcodeScanner, { canScan } from './BarcodeScanner'
 import ManualRecord from './ManualRecord'
 import { useDialog, useToast } from './notify'
 
@@ -21,6 +22,7 @@ export default function AddRecord({
   defaultTarget?: 'collection' | 'wishlist'
 }) {
   const [manual, setManual] = useState(false)
+  const [scanning, setScanning] = useState(false)
   const [term, setTerm] = useState('')
   const [allFormats, setAllFormats] = useState(false)
   const [data, setData] = useState<SearchResponse | null>(null)
@@ -70,6 +72,12 @@ export default function AddRecord({
   function submit(e: FormEvent) {
     e.preventDefault()
     if (term.trim()) void run({ mode: modeFor(term.trim()), term: term.trim(), allFormats }, 1)
+  }
+
+  function scanned(code: string) {
+    setScanning(false)
+    setTerm(code)
+    void run({ mode: 'barcode', term: code, allFormats }, 1)
   }
 
   async function add(r: SearchResult, target: 'collection' | 'wishlist') {
@@ -136,6 +144,17 @@ export default function AddRecord({
                 </button>
               )}
             </div>
+            {!IS_DEMO && canScan() && (
+              <button
+                type="button"
+                onClick={() => setScanning(true)}
+                aria-label="Scan a barcode"
+                title="Scan a barcode"
+                className="rounded-md border border-ink-700 px-3 text-ink-300 hover:border-wax hover:text-wax"
+              >
+                <ScanBarcode className="size-4" />
+              </button>
+            )}
             <button className="flex items-center gap-2 rounded-md bg-wax px-4 py-2 text-sm font-medium text-on-wax hover:bg-wax-hover">
               <Search className="size-4" /> Search
             </button>
@@ -245,6 +264,7 @@ export default function AddRecord({
         </div>
       </div>
       )}
+      {scanning && <BarcodeScanner onScan={scanned} onClose={() => setScanning(false)} />}
     </div>
   )
 }

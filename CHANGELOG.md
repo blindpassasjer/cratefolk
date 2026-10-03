@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Added
+- **Scan a barcode to add a record.** The Add record dialog has a scan button that opens your camera, reads the barcode on the sleeve and runs the search for you. It needs HTTPS (or `localhost`), so the button is hidden over plain HTTP and in the demo. Safari and Firefox load a small decoder the first time you scan.
+
 ### Changed
 - **Account page is grouped into sections.** Settings are now under Sign-in, Preferences and Privacy headings, each with a short description.
 

@@ -51,7 +51,7 @@ without installing anything.
 ## Features
 
 - 💿 **Vinyl, CDs and cassettes** — one search box for artist/album, catalog number or barcode (vinyl by
-  default, or include every format); the exact pressing, tracklist, label and cover are saved locally,
+  default, or include every format), or scan the barcode with your phone's camera; the exact pressing, tracklist, label and cover are saved locally,
   and CDs and cassettes get a small badge on their cover. Not on Discogs? Add the record by hand,
   with your own cover photo and tracklist (you can edit or delete these later). Adding a record you
   already own asks first
@@ -179,6 +179,8 @@ Moving Cratelog to a new machine is the same thing: copy `data/` over, along wit
 Cratelog speaks plain HTTP on port 6170. To serve it over HTTPS, put a reverse proxy with a
 certificate in front of it (Caddy, Traefik, Nginx Proxy Manager, or your NAS's built-in one all work)
 and set `COOKIE_SECURE=true` in `.env` so the session cookie is only sent over HTTPS.
+HTTPS is also required for barcode scanning: browsers only allow camera access on secure pages (or
+`localhost`), so the scan button is hidden when Cratelog is served over plain HTTP.
 
 ### Configuration
 
