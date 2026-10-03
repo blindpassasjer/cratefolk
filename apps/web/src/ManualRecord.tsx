@@ -1,5 +1,5 @@
-import { Disc3, ImagePlus, Loader2, X } from 'lucide-react'
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { Disc3, ImagePlus, Loader2, Plus, X } from 'lucide-react'
+import { Fragment, useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { api, ApiError, type ReleaseDetail } from './api'
 import Cover from './Cover'
 import { useDialog, useToast } from './notify'
@@ -17,33 +17,20 @@ async function resizeCover(file: File): Promise<string> {
   return canvas.toDataURL('image/jpeg', 0.85)
 }
 
-// A track line may start with its position and a separator ("A1. Title", "B2) Title", "A1 | Title", "1-3: Title")
-// and end with its duration ("Title - 3:45").
-const POSITION = /^([A-Za-z]{1,2}\d{1,2}|\d{1,2}(?:-\d{1,2})?)\s*[.|:)]\s*(.+)$/
-const DURATION = /^(.+?)\s+-\s+(\d{1,3}:\d{2}(?::\d{2})?)$/
+type Track = { position: string; title: string; duration: string }
+const SIDES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
 
-/** One track per line; lines without a position prefix are numbered by their place in the list. */
-function parseTracks(text: string) {
-  return text
-    .split('\n')
-    .map((t) => t.trim())
-    .filter(Boolean)
-    .map((line, i) => {
-      const p = POSITION.exec(line)
-      const rest = p ? p[2]! : line
-      const d = DURATION.exec(rest)
-      return { position: p ? p[1]!.toUpperCase() : String(i + 1), title: d ? d[1]! : rest, duration: d ? d[2]! : '' }
-    })
+/** Splits a position like "A1" into side "A" and number "1"; "3" or "1-3" have no side. */
+function splitPosition(position: string) {
+  const m = /^([A-Za-z])(.*)$/.exec(position)
+  return m ? { side: m[1]!.toUpperCase(), num: m[2]! } : { side: '', num: position }
 }
 
-/** Inverse of parseTracks: only shows a position when it isn't the plain running number. */
-function formatTracks(tracklist: ReleaseDetail['tracklist']) {
-  return tracklist
-    .map((t, i) => {
-      const pos = t.position && t.position !== String(i + 1) ? `${t.position}. ` : ''
-      return `${pos}${t.title}${t.duration ? ` - ${t.duration}` : ''}`
-    })
-    .join('\n')
+/** The track that follows `prev`: same side, next number when it's a plain integer. */
+function nextTrack(prev?: Track): Track {
+  const { side, num } = splitPosition(prev?.position ?? '')
+  const n = /^\d+$/.test(num) ? String(Number(num) + 1) : prev ? '' : '1'
+  return { position: `${side}${n}`, title: '', duration: '' }
 }
 
 const input = 'w-full rounded-md border border-ink-700 bg-ink-950 px-3 py-2 text-sm outline-none focus:border-wax'
@@ -85,7 +72,7 @@ export default function ManualRecord({
     format: release ? release.format : 'Vinyl, LP',
     barcode: release?.barcode ?? '',
     genres: release?.genres.join(', ') ?? '',
-    tracks: release ? formatTracks(release.tracklist) : '',
+    tracks: release?.tracklist.map((t) => ({ position: t.position, title: t.title, duration: t.duration })) ?? ([] as Track[]),
     notes: release?.notes ?? '',
   })
   // A data: URL replaces the cover, null removes it, undefined keeps the saved one (editing) or means none (adding).
@@ -101,7 +88,11 @@ export default function ManualRecord({
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [editing, onClose])
-  const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((s) => ({ ...s, [k]: e.target.value }))
+  const set = (k: Exclude<keyof typeof f, 'tracks'>) => (e: { target: { value: string } }) => setF((s) => ({ ...s, [k]: e.target.value }))
+
+  const setTrack = (i: number, patch: Partial<Track>) => setF((s) => ({ ...s, tracks: s.tracks.map((t, j) => (j === i ? { ...t, ...patch } : t)) }))
+  const addTrack = () => setF((s) => ({ ...s, tracks: [...s.tracks, nextTrack(s.tracks[s.tracks.length - 1])] }))
+  const removeTrack = (i: number) => setF((s) => ({ ...s, tracks: s.tracks.filter((_, j) => j !== i) }))
 
   async function pickCover(file: File | undefined) {
     if (!file) return
@@ -127,7 +118,7 @@ export default function ManualRecord({
         format: f.format,
         barcode: f.barcode,
         genres: f.genres.split(',').map((g) => g.trim()).filter(Boolean),
-        tracklist: parseTracks(f.tracks),
+        tracklist: f.tracks.filter((t) => t.title.trim()).map((t) => ({ position: t.position.trim(), title: t.title.trim(), duration: t.duration.trim() })),
         notes: f.notes,
         cover,
       }
@@ -220,9 +211,42 @@ export default function ManualRecord({
         <Field label="Genres (comma separated)">
           <input value={f.genres} onChange={set('genres')} className={input} />
         </Field>
-        <Field label="Tracklist (one track per line, optionally “A1. Title - 3:45”)">
-          <textarea value={f.tracks} onChange={set('tracks')} rows={4} placeholder={'A1. First track - 3:45\nA2. Second track - 4:10\nB1. Flip side - 2:58'} className={input} />
-        </Field>
+        <div className="space-y-1">
+          <span className="text-xs text-ink-500">Tracklist</span>
+          <div className="grid grid-cols-[4rem_3.5rem_minmax(0,1fr)_5rem_1rem] items-center gap-2">
+            {f.tracks.length > 0 && (
+              <>
+              <span className="text-xs text-ink-500">Side</span>
+              <span className="text-xs text-ink-500">Track</span>
+              <span className="text-xs text-ink-500">Title</span>
+              <span className="text-xs text-ink-500">Duration</span>
+                <span />
+              </>
+            )}
+            {f.tracks.map((t, i) => {
+              const { side, num } = splitPosition(t.position)
+              return (
+                <Fragment key={i}>
+                  <select value={side} onChange={(e) => setTrack(i, { position: e.target.value + num })} aria-label={`Track ${i + 1} side`} className={input}>
+                    <option value="">–</option>
+                    {SIDES.map((s) => (
+                      <option key={s}>{s}</option>
+                    ))}
+                  </select>
+                  <input value={num} onChange={(e) => setTrack(i, { position: side + e.target.value })} aria-label={`Track ${i + 1} number`} placeholder="#" maxLength={9} className={input} />
+                  <input value={t.title} onChange={(e) => setTrack(i, { title: e.target.value })} aria-label={`Track ${i + 1} title`} placeholder="Title" maxLength={200} className={input} />
+                  <input value={t.duration} onChange={(e) => setTrack(i, { duration: e.target.value })} aria-label={`Track ${i + 1} duration`} placeholder="3:45" maxLength={10} className={input} />
+                  <button type="button" onClick={() => removeTrack(i)} aria-label={`Remove track ${i + 1}`} className="text-ink-500 hover:text-danger">
+                    <X className="size-4" />
+                  </button>
+                </Fragment>
+              )
+            })}
+          </div>
+          <button type="button" onClick={addTrack} className="inline-flex items-center gap-1 text-sm text-ink-300 hover:text-ink-100">
+            <Plus className="size-4" /> Add track
+          </button>
+        </div>
         <Field label="Notes">
           <textarea value={f.notes} onChange={set('notes')} rows={2} maxLength={2000} className={input} />
         </Field>
