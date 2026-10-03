@@ -1,16 +1,24 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
-import { api, CURRENCIES } from '../api'
-import { useAuth } from '../auth'
-import { useToast } from '../notify'
-import { SHOPS, parseShops } from '../Market'
-import AdminUsers from './AdminUsers'
+import { useState, type FormEvent, type ReactNode } from "react";
+import { api, CURRENCIES } from "../api";
+import { useAuth } from "../auth";
+import { useToast } from "../notify";
+import { SHOPS, parseShops } from "../Market";
+import AdminUsers from "./AdminUsers";
 
 const input =
-  'w-full rounded-md border border-ink-700 bg-ink-900 px-3 py-2 text-sm outline-none transition-colors focus:border-wax disabled:opacity-60'
+  "w-full rounded-md border border-ink-700 bg-ink-900 px-3 py-2 text-sm outline-none transition-colors focus:border-wax disabled:opacity-60";
 const button =
-  'rounded-md bg-wax px-4 py-2 text-sm font-medium text-on-wax transition-colors hover:bg-wax-hover disabled:opacity-60'
+  "rounded-md bg-wax px-4 py-2 text-sm font-medium text-on-wax transition-colors hover:bg-wax-hover disabled:opacity-60";
 
-function Card({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
+function Card({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  children: ReactNode;
+}) {
   return (
     <section className="space-y-4 rounded-xl border border-ink-800 bg-ink-900/60 p-5">
       <div>
@@ -19,7 +27,29 @@ function Card({ title, hint, children }: { title: string; hint?: string; childre
       </div>
       {children}
     </section>
-  )
+  );
+}
+
+function Group({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="border-b border-ink-800 pb-2">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-300">
+          {title}
+        </h2>
+        <p className="mt-0.5 text-xs text-ink-500">{description}</p>
+      </div>
+      {children}
+    </div>
+  );
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -28,182 +58,320 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
       {label}
       {children}
     </label>
-  )
+  );
 }
 
 export default function Account() {
-  const { user, refresh, setCurrency } = useAuth()
-  const toast = useToast()
-  const isAdmin = user?.role === 'admin'
+  const { user, refresh, setCurrency } = useAuth();
+  const toast = useToast();
+  const isAdmin = user?.role === "admin";
 
-  const [name, setName] = useState(user?.name ?? '')
-  const [email, setEmail] = useState(user?.email ?? '')
-  const [emailPassword, setEmailPassword] = useState('')
-  const [savingProfile, setSavingProfile] = useState(false)
+  const [name, setName] = useState(user?.name ?? "");
+  const [email, setEmail] = useState(user?.email ?? "");
+  const [emailPassword, setEmailPassword] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
 
-  const [current, setCurrent] = useState('')
-  const [next, setNext] = useState('')
-  const [confirm, setConfirm] = useState('')
-  const [savingPassword, setSavingPassword] = useState(false)
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [savingPassword, setSavingPassword] = useState(false);
 
-  const emailChanged = !!user && email.trim().toLowerCase() !== user.email
+  const emailChanged = !!user && email.trim().toLowerCase() !== user.email;
 
   async function saveProfile(e: FormEvent) {
-    e.preventDefault()
-    setSavingProfile(true)
+    e.preventDefault();
+    setSavingProfile(true);
     try {
-      await api('/auth/me', {
-        method: 'PATCH',
-        json: { name, ...(emailChanged ? { email: email.trim(), currentPassword: emailPassword } : {}) },
-      })
-      await refresh()
-      setEmailPassword('')
-      toast.success(emailChanged ? 'Profile saved. Use your new email next time you sign in.' : 'Profile saved')
+      await api("/auth/me", {
+        method: "PATCH",
+        json: {
+          name,
+          ...(emailChanged
+            ? { email: email.trim(), currentPassword: emailPassword }
+            : {}),
+        },
+      });
+      await refresh();
+      setEmailPassword("");
+      toast.success(
+        emailChanged
+          ? "Profile saved. Use your new email next time you sign in."
+          : "Profile saved",
+      );
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not save your profile')
+      toast.error(
+        err instanceof Error ? err.message : "Could not save your profile",
+      );
     } finally {
-      setSavingProfile(false)
+      setSavingProfile(false);
     }
   }
 
-  async function saveSharing(patch: { shareCollection?: boolean; shareWishlist?: boolean; shareActivity?: boolean }) {
+  async function saveSharing(patch: {
+    shareCollection?: boolean;
+    shareWishlist?: boolean;
+    shareActivity?: boolean;
+  }) {
     try {
-      await api('/auth/me', { method: 'PATCH', json: patch })
-      await refresh()
+      await api("/auth/me", { method: "PATCH", json: patch });
+      await refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not save your sharing settings')
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Could not save your sharing settings",
+      );
     }
   }
 
   async function saveShops(id: string, on: boolean) {
-    const current = parseShops(user?.shops)
-    const shops = on ? [...current, id] : current.filter((s) => s !== id)
+    const current = parseShops(user?.shops);
+    const shops = on ? [...current, id] : current.filter((s) => s !== id);
     try {
-      await api('/auth/me', { method: 'PATCH', json: { shops: SHOPS.filter((s) => shops.includes(s.id)).map((s) => s.id) } })
-      await refresh()
+      await api("/auth/me", {
+        method: "PATCH",
+        json: {
+          shops: SHOPS.filter((s) => shops.includes(s.id)).map((s) => s.id),
+        },
+      });
+      await refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not save your shops')
+      toast.error(
+        err instanceof Error ? err.message : "Could not save your shops",
+      );
     }
   }
 
   async function savePassword(e: FormEvent) {
-    e.preventDefault()
-    if (next !== confirm) return toast.error("The new passwords don't match")
-    setSavingPassword(true)
+    e.preventDefault();
+    if (next !== confirm) return toast.error("The new passwords don't match");
+    setSavingPassword(true);
     try {
-      await api('/auth/password', { method: 'POST', json: { currentPassword: current, newPassword: next } })
-      setCurrent('')
-      setNext('')
-      setConfirm('')
-      toast.success('Password changed. Your other devices have been signed out.')
+      await api("/auth/password", {
+        method: "POST",
+        json: { currentPassword: current, newPassword: next },
+      });
+      setCurrent("");
+      setNext("");
+      setConfirm("");
+      toast.success(
+        "Password changed. Your other devices have been signed out.",
+      );
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not change your password')
+      toast.error(
+        err instanceof Error ? err.message : "Could not change your password",
+      );
     } finally {
-      setSavingPassword(false)
+      setSavingPassword(false);
     }
   }
 
   return (
     <div className="space-y-10">
-      <div className="space-y-6">
+      <div className="space-y-8">
         <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
-        <div className="grid items-start gap-6 lg:grid-cols-2">
-          <div className="space-y-6">
-        <Card title="Profile" hint={isAdmin ? 'The admin email is set with ADMIN_EMAIL in your environment, so only the name can be changed here.' : undefined}>
-          <form onSubmit={saveProfile} className="space-y-4">
-            <Field label="Name">
-              <input className={input} required maxLength={80} value={name} onChange={(e) => setName(e.target.value)} />
-            </Field>
-            <Field label="Email address">
-              <input className={input} type="email" required disabled={isAdmin} autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-            </Field>
-            {emailChanged && (
-              <Field label="Current password (needed to change your email)">
-                <input className={input} type="password" required autoComplete="current-password" value={emailPassword} onChange={(e) => setEmailPassword(e.target.value)} />
-              </Field>
-            )}
-            <div className="flex items-center gap-4">
-              <button className={button} disabled={savingProfile}>
-                {savingProfile ? 'Saving…' : 'Save changes'}
-              </button>
-            </div>
-          </form>
-        </Card>
 
-        <Card title="Preferences" hint="Marketplace prices on your wishlist are shown in this currency. NOK is used for your asking prices, but Discogs does not offer it, so marketplace prices show in EUR.">
-          <Field label="Currency">
-            <select className={input} value={user?.currency ?? 'USD'} onChange={(e) => void setCurrency(e.target.value)}>
-              {CURRENCIES.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
-          </Field>
-        </Card>
-
-        <Card title="Shop links" hint="Shops to show quick search links for on your wishlist and record pages. These open the shop's own search, so no prices are shown.">
-          {(['Global', 'Nordic', 'Europe', 'UK & US'] as const).map((region) => (
-            <fieldset key={region} className="space-y-2">
-              <legend className="mb-1 text-xs font-medium uppercase tracking-wide text-ink-500">{region}</legend>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                {SHOPS.filter((s) => s.region === region).map((shop) => (
-                  <label key={shop.id} className="flex items-center gap-2 text-sm text-ink-300">
+        <Group
+          title="Sign-in"
+          description="Who you are and how you get into your Cratelog."
+        >
+          <div className="grid items-start gap-6 lg:grid-cols-2">
+            <Card
+              title="Profile"
+              hint={
+                isAdmin
+                  ? "The admin email is set with ADMIN_EMAIL in your environment, so only the name can be changed here."
+                  : undefined
+              }
+            >
+              <form onSubmit={saveProfile} className="space-y-4">
+                <Field label="Name">
+                  <input
+                    className={input}
+                    required
+                    maxLength={80}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </Field>
+                <Field label="Email address">
+                  <input
+                    className={input}
+                    type="email"
+                    required
+                    disabled={isAdmin}
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </Field>
+                {emailChanged && (
+                  <Field label="Current password (needed to change your email)">
                     <input
-                      type="checkbox"
-                      className="accent-wax"
-                      checked={parseShops(user?.shops).includes(shop.id)}
-                      onChange={(e) => void saveShops(shop.id, e.target.checked)}
+                      className={input}
+                      type="password"
+                      required
+                      autoComplete="current-password"
+                      value={emailPassword}
+                      onChange={(e) => setEmailPassword(e.target.value)}
                     />
-                    {shop.name}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-          ))}
-        </Card>
-          </div>
-          <div className="space-y-6">
-        <Card title="Password" hint={isAdmin ? 'The admin password is set with ADMIN_PASSWORD in your environment. Change it there and restart.' : 'Changing it signs you out of your other devices.'}>
-          {!isAdmin && (
-            <form onSubmit={savePassword} className="space-y-4">
-              <Field label="Current password">
-                <input className={input} type="password" required autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} />
-              </Field>
-              <Field label="New password (8+ characters)">
-                <input className={input} type="password" required minLength={8} autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} />
-              </Field>
-              <Field label="Repeat new password">
-                <input className={input} type="password" required minLength={8} autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
-              </Field>
-              <div className="flex items-center gap-4">
-                <button className={button} disabled={savingPassword}>
-                  {savingPassword ? 'Changing…' : 'Change password'}
-                </button>
-              </div>
-            </form>
-          )}
-        </Card>
+                  </Field>
+                )}
+                <div className="flex items-center gap-4">
+                  <button className={button} disabled={savingProfile}>
+                    {savingProfile ? "Saving…" : "Save changes"}
+                  </button>
+                </div>
+              </form>
+            </Card>
 
-        <Card title="Sharing" hint="Friends on this Cratelog can browse what you allow here. They only see which records you have, never your grades, notes or prices. Activity only shows for what you share above.">
-          {([
-            ['shareCollection', 'Let friends browse my collection'],
-            ['shareWishlist', 'Let friends see my wishlist'],
-            ['shareActivity', "Show what I add, wishlist and sell in friends' activity feeds"],
-          ] as const).map(([field, label]) => (
-            <label key={field} className="flex items-center gap-2 text-sm text-ink-300">
-              <input
-                type="checkbox"
-                className="accent-wax"
-                checked={!!user?.[field]}
-                onChange={(e) => void saveSharing({ [field]: e.target.checked })}
-              />
-              {label}
-            </label>
-          ))}
-        </Card>
+            <Card
+              title="Password"
+              hint={
+                isAdmin
+                  ? "The admin password is set with ADMIN_PASSWORD in your environment. Change it there and restart."
+                  : "Changing it signs you out of your other devices."
+              }
+            >
+              {!isAdmin && (
+                <form onSubmit={savePassword} className="space-y-4">
+                  <Field label="Current password">
+                    <input
+                      className={input}
+                      type="password"
+                      required
+                      autoComplete="current-password"
+                      value={current}
+                      onChange={(e) => setCurrent(e.target.value)}
+                    />
+                  </Field>
+                  <Field label="New password (8+ characters)">
+                    <input
+                      className={input}
+                      type="password"
+                      required
+                      minLength={8}
+                      autoComplete="new-password"
+                      value={next}
+                      onChange={(e) => setNext(e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Repeat new password">
+                    <input
+                      className={input}
+                      type="password"
+                      required
+                      minLength={8}
+                      autoComplete="new-password"
+                      value={confirm}
+                      onChange={(e) => setConfirm(e.target.value)}
+                    />
+                  </Field>
+                  <div className="flex items-center gap-4">
+                    <button className={button} disabled={savingPassword}>
+                      {savingPassword ? "Changing…" : "Change password"}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </Card>
           </div>
-        </div>
+        </Group>
+
+        <Group
+          title="Preferences"
+          description="How prices and shop links appear in your Cratelog."
+        >
+          <div className="grid items-start gap-6 lg:grid-cols-2">
+            <Card
+              title="Preferences"
+              hint="Marketplace prices on your wishlist are shown in this currency. NOK is used for your asking prices, but Discogs does not offer it, so marketplace prices show in EUR."
+            >
+              <Field label="Currency">
+                <select
+                  className={input}
+                  value={user?.currency ?? "USD"}
+                  onChange={(e) => void setCurrency(e.target.value)}
+                >
+                  {CURRENCIES.map((c) => (
+                    <option key={c}>{c}</option>
+                  ))}
+                </select>
+              </Field>
+            </Card>
+
+            <Card
+              title="Shop links"
+              hint="Shops to show quick search links for on your wishlist and record pages. These open the shop's own search, so no prices are shown."
+            >
+              {(["Global", "Nordic", "Europe", "UK & US"] as const).map(
+                (region) => (
+                  <fieldset key={region} className="space-y-2">
+                    <legend className="mb-1 text-xs font-medium uppercase tracking-wide text-ink-500">
+                      {region}
+                    </legend>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                      {SHOPS.filter((s) => s.region === region).map((shop) => (
+                        <label
+                          key={shop.id}
+                          className="flex items-center gap-2 text-sm text-ink-300"
+                        >
+                          <input
+                            type="checkbox"
+                            className="accent-wax"
+                            checked={parseShops(user?.shops).includes(shop.id)}
+                            onChange={(e) =>
+                              void saveShops(shop.id, e.target.checked)
+                            }
+                          />
+                          {shop.name}
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                ),
+              )}
+            </Card>
+          </div>
+        </Group>
+
+        <Group
+          title="Privacy"
+          description="What friends on this Cratelog can see."
+        >
+          <Card
+            title="Sharing"
+            hint="Friends on this Cratelog can browse what you allow here. They only see which records you have, never your grades, notes or prices. Activity only shows for the parts of your Cratelog you share."
+          >
+            {(
+              [
+                ["shareCollection", "Let friends browse my collection"],
+                ["shareWishlist", "Let friends see my wishlist"],
+                [
+                  "shareActivity",
+                  "Show what I add, wishlist and sell in friends' activity feeds",
+                ],
+              ] as const
+            ).map(([field, label]) => (
+              <label
+                key={field}
+                className="flex items-center gap-2 text-sm text-ink-300"
+              >
+                <input
+                  type="checkbox"
+                  className="accent-wax"
+                  checked={!!user?.[field]}
+                  onChange={(e) =>
+                    void saveSharing({ [field]: e.target.checked })
+                  }
+                />
+                {label}
+              </label>
+            ))}
+          </Card>
+        </Group>
       </div>
       {isAdmin && <AdminUsers />}
     </div>
-  )
+  );
 }

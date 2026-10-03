@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- **Account page is grouped into sections.** Settings are now under Sign-in, Preferences and Privacy headings, each with a short description.
+
+### Fixed
+- The Vinylpladen shop link now opens the shop's current search page.
+
 ## 0.5.2 (2026-10-03)
 
 ### Added

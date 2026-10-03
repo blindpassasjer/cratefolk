@@ -26,7 +26,7 @@ export const SHOPS: Shop[] = [
   { id: 'ebay', name: 'eBay', region: 'Global', url: (q) => `https://www.ebay.com/sch/i.html?_nkw=${q}` },
   { id: 'bandcamp', name: 'Bandcamp', region: 'Global', url: (q) => `https://bandcamp.com/search?q=${q}` },
   { id: 'amazon', name: 'Amazon', region: 'Global', url: (q) => `https://www.amazon.com/s?k=${q}&i=popular` },
-  { id: 'vinylpladen', name: 'Vinylpladen', region: 'Nordic', url: (q) => `https://www.vinylpladen.no/search?q=${q}` },
+  { id: 'vinylpladen', name: 'Vinylpladen', region: 'Nordic', url: (q) => `https://vinylpladen.no/soek?q=${q}` },
   { id: 'platekompaniet', name: 'Platekompaniet', region: 'Nordic', url: (q) => `https://www.platekompaniet.no/search?q=${q}` },
   { id: 'finn', name: 'FINN.no', region: 'Nordic', url: (q) => `https://www.finn.no/recommerce/forsale/search?q=${q}` },
   { id: 'tradera', name: 'Tradera', region: 'Nordic', url: (q) => `https://www.tradera.com/search?q=${q}` },
