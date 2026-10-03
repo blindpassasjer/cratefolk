@@ -104,7 +104,7 @@ export default function Collection() {
 
       {(copies?.length ?? 0) > 0 && (
         <div className="space-y-3">
-          <SearchBar value={query} onChange={setQuery} placeholder="Search artist, title, label, catalog no. or barcode  ( / )" />
+          <SearchBar value={query} onChange={setQuery} placeholder="Search artist, title, label, track, catalog no. or barcode  ( / )" />
           <FilterBar sort={sort} onSort={(s) => setParam('sort', s === 'added' ? '' : s)} filters={filters} onFilter={setParam} options={options}>
             <CoverSizeSlider size={cover.size} onChange={cover.resize} />
           </FilterBar>

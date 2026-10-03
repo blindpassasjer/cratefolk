@@ -4,7 +4,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { requireUser, type AppEnv } from '../auth.js'
 import { db } from '../db.js'
-import { coverFile } from '../releases.js'
+import { coverFile, TRACKS_SQL } from '../releases.js'
 
 type Kind = 'all' | 'group' | 'wishlist' | 'forsale'
 
@@ -82,7 +82,7 @@ const lookup = (token: string) =>
     .get(token) as ShareRow | undefined
 
 const ITEM_COLUMNS = `r.id AS releaseId, r.title, r.artist, r.year, r.country, r.label, r.catno, r.format,
-                      r.has_cover AS hasCover`
+                      r.has_cover AS hasCover, ${TRACKS_SQL}`
 
 function itemsFor(share: ShareRow) {
   if (share.kind === 'wishlist') {

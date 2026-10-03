@@ -4,7 +4,7 @@ import { requireUser, type AppEnv } from '../auth.js'
 import { db } from '../db.js'
 import { logEvent } from '../events.js'
 import { DiscogsError, fetchMarketStats, marketCurrency } from '../discogs.js'
-import { ensureRelease } from '../releases.js'
+import { ensureRelease, TRACKS_SQL } from '../releases.js'
 
 export const wishlistRoutes = new Hono<AppEnv>()
 export const statusRoutes = new Hono<AppEnv>()
@@ -15,7 +15,7 @@ const grade = z.enum(['M', 'NM', 'VG+', 'VG', 'G+', 'G', 'F', 'P']).nullable()
 
 const ITEM_SELECT = `
   SELECT w.id AS wishId, w.release_id AS releaseId, w.notes, w.added_at AS addedAt,
-         r.title, r.artist, r.year, r.country, r.label, r.catno, r.format, r.barcode, r.has_cover AS hasCover
+         r.title, r.artist, r.year, r.country, r.label, r.catno, r.format, r.barcode, r.has_cover AS hasCover, ${TRACKS_SQL}
   FROM wishlist w JOIN releases r ON r.id = w.release_id`
 
 wishlistRoutes.get('/', (c) =>

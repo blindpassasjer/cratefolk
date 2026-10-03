@@ -85,7 +85,7 @@ export default function Wishlist() {
       </div>
 
       {items && items.length > 0 && (
-        <SearchBar value={query} onChange={setQuery} placeholder="Search artist, title, label, catalog no. or barcode  ( / )" />
+        <SearchBar value={query} onChange={setQuery} placeholder="Search artist, title, label, track, catalog no. or barcode  ( / )" />
       )}
 
       {items && items.length > 0 && (

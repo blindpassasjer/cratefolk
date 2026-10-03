@@ -55,7 +55,7 @@ const byArtist = (a: { artist: string; title: string }, b: { artist: string; tit
   a.artist.localeCompare(b.artist) || a.title.localeCompare(b.title)
 
 function releaseFields(r: ReleaseDetail) {
-  return { releaseId: r.id, title: r.title, artist: r.artist, year: r.year, country: r.country, label: r.label, catno: r.catno, format: r.format, barcode: r.barcode, hasCover: r.hasCover }
+  return { releaseId: r.id, title: r.title, artist: r.artist, year: r.year, country: r.country, label: r.label, catno: r.catno, format: r.format, barcode: r.barcode, tracks: r.tracklist.map((t) => t.title).join(' / ') || null, hasCover: r.hasCover }
 }
 
 function copyRow(c: StoredCopy): Copy {

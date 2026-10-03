@@ -62,6 +62,8 @@ export interface Copy {
   catno: string | null
   format: string
   barcode: string | null
+  /** Track titles joined into one string, for searching. */
+  tracks: string | null
   hasCover: number
   mediaCondition: Grade | null
   sleeveCondition: Grade | null

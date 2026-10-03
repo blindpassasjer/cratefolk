@@ -6,7 +6,7 @@ import { db } from '../db.js'
 import { DiscogsError } from '../discogs.js'
 import { logEvent } from '../events.js'
 import { triviaFor } from '../trivia.js'
-import { canAccessRelease, coverFile, createManualRelease, deleteManualRelease, ensureRelease, isCreator, updateManualRelease } from '../releases.js'
+import { TRACKS_SQL, canAccessRelease, coverFile, createManualRelease, deleteManualRelease, ensureRelease, isCreator, updateManualRelease } from '../releases.js'
 
 export const collectionRoutes = new Hono<AppEnv>()
 export const releaseRoutes = new Hono<AppEnv>()
@@ -23,7 +23,7 @@ const COPY_SELECT = `
          c.user_id AS ownerId, c.co_owner_id AS coOwnerId,
          (SELECT name FROM users WHERE id = c.user_id) AS ownerName,
          (SELECT name FROM users WHERE id = c.co_owner_id) AS coOwnerName,
-         r.title, r.artist, r.year, r.country, r.label, r.catno, r.format, r.barcode, r.has_cover AS hasCover,
+         r.title, r.artist, r.year, r.country, r.label, r.catno, r.format, r.barcode, r.has_cover AS hasCover, ${TRACKS_SQL},
          (SELECT group_concat(collection_id) FROM collection_copies WHERE copy_id = c.id) AS collectionIds
   FROM copies c JOIN releases r ON r.id = c.release_id`
 

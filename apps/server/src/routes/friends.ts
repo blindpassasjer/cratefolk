@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import { Hono } from 'hono'
 import { requireUser, type AppEnv } from '../auth.js'
 import { db } from '../db.js'
-import { coverFile } from '../releases.js'
+import { coverFile, TRACKS_SQL } from '../releases.js'
 
 // Read-only browsing of other friends' collections. Each friend opts in on their Account page; grades,
 // notes and prices are never included here.
@@ -62,7 +62,7 @@ friendRoutes.get('/feed', (c) => {
 })
 
 const ITEM_COLUMNS = `r.id AS releaseId, r.title, r.artist, r.year, r.country, r.label, r.catno, r.format,
-                      r.has_cover AS hasCover`
+                      r.has_cover AS hasCover, ${TRACKS_SQL}`
 const ORDER = 'ORDER BY r.artist COLLATE NOCASE, r.year, r.title COLLATE NOCASE'
 
 friendRoutes.get('/:id', (c) => {

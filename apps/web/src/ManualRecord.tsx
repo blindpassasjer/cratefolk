@@ -17,6 +17,26 @@ async function resizeCover(file: File): Promise<string> {
   return canvas.toDataURL('image/jpeg', 0.85)
 }
 
+// A track line may start with its position and a separator: "A1. Title", "B2) Title", "A1 | Title", "1-3: Title".
+const POSITION = /^([A-Za-z]{1,2}\d{1,2}|\d{1,2}(?:-\d{1,2})?)\s*[.|:)]\s*(.+)$/
+
+/** One track per line; lines without a position prefix are numbered by their place in the list. */
+function parseTracks(text: string) {
+  return text
+    .split('\n')
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .map((line, i) => {
+      const m = POSITION.exec(line)
+      return { position: m ? m[1]!.toUpperCase() : String(i + 1), title: m ? m[2]! : line, duration: '' }
+    })
+}
+
+/** Inverse of parseTracks: only shows a position when it isn't the plain running number. */
+function formatTracks(tracklist: ReleaseDetail['tracklist']) {
+  return tracklist.map((t, i) => (t.position && t.position !== String(i + 1) ? `${t.position}. ${t.title}` : t.title)).join('\n')
+}
+
 const input = 'w-full rounded-md border border-ink-700 bg-ink-950 px-3 py-2 text-sm outline-none focus:border-wax'
 
 function Field({ label, children, className = '' }: { label: string; children: ReactNode; className?: string }) {
@@ -56,7 +76,7 @@ export default function ManualRecord({
     format: release ? release.format : 'Vinyl, LP',
     barcode: release?.barcode ?? '',
     genres: release?.genres.join(', ') ?? '',
-    tracks: release?.tracklist.map((t) => t.title).join('\n') ?? '',
+    tracks: release ? formatTracks(release.tracklist) : '',
     notes: release?.notes ?? '',
   })
   // A data: URL replaces the cover, null removes it, undefined keeps the saved one (editing) or means none (adding).
@@ -98,7 +118,7 @@ export default function ManualRecord({
         format: f.format,
         barcode: f.barcode,
         genres: f.genres.split(',').map((g) => g.trim()).filter(Boolean),
-        tracklist: f.tracks.split('\n').map((t) => t.trim()).filter(Boolean).map((title, i) => ({ position: String(i + 1), title, duration: '' })),
+        tracklist: parseTracks(f.tracks),
         notes: f.notes,
         cover,
       }
@@ -191,8 +211,8 @@ export default function ManualRecord({
         <Field label="Genres (comma separated)">
           <input value={f.genres} onChange={set('genres')} className={input} />
         </Field>
-        <Field label="Tracklist (one track per line)">
-          <textarea value={f.tracks} onChange={set('tracks')} rows={4} className={input} />
+        <Field label="Tracklist (one track per line, optionally prefixed with its side, e.g. “A1. Title”)">
+          <textarea value={f.tracks} onChange={set('tracks')} rows={4} placeholder={'A1. First track\nA2. Second track\nB1. Flip side'} className={input} />
         </Field>
         <Field label="Notes">
           <textarea value={f.notes} onChange={set('notes')} rows={2} maxLength={2000} className={input} />

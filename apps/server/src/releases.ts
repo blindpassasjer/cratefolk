@@ -9,6 +9,9 @@ import { prefetchTrivia } from './trivia.js'
 const coversDir = path.join(config.dataDir, 'covers')
 fs.mkdirSync(coversDir, { recursive: true })
 
+/** SQL column of a release's track titles as one string, so list views can search them without shipping the whole tracklist. */
+export const TRACKS_SQL = `(SELECT group_concat(json_extract(value, '$.title'), ' / ') FROM json_each(r.tracklist)) AS tracks`
+
 export const coverPath = (id: number) => path.join(coversDir, `${id}.jpg`)
 const thumbPath = (id: number) => path.join(coversDir, `${id}.thumb.jpg`)
 

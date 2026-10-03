@@ -94,7 +94,7 @@ export default function Friend() {
 
       {items.length > 8 && (
         <div className="space-y-3">
-          <SearchBar value={query} onChange={(q) => setParam('q', q)} placeholder="Search artist, title, label or catalog no.  ( / )" />
+          <SearchBar value={query} onChange={(q) => setParam('q', q)} placeholder="Search artist, title, label, track or catalog no.  ( / )" />
           <FilterBar sort={sort} onSort={(s) => setParam('sort', s === 'artist' ? '' : s)} filters={filters} onFilter={setParam} options={filterOptions(items)} sorts={sorts}>
 <CoverSizeSlider size={cover.size} onChange={cover.resize} />
 </FilterBar>
