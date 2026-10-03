@@ -114,7 +114,7 @@ export default function Wishlist() {
         {visible?.map((w) => (
           <div key={w.wishId} className="group">
             <Link to={`/release/${w.releaseId}`} className="block">
-              <Cover releaseId={w.releaseId} hasCover={!!w.hasCover} badge={<FormatBadge format={w.format} />} className="rounded-md shadow-lg shadow-black/40 ring-1 ring-ink-800 transition group-hover:ring-wax/60" />
+              <Cover releaseId={w.releaseId} hasCover={!!w.hasCover} badge={<FormatBadge format={w.format} />} className="rounded-md shadow-sm shadow-black/40 ring-1 ring-ink-800 transition group-hover:ring-wax/60" />
               <div className="mt-2 truncate text-sm font-medium">{w.title}</div>
               <div className="truncate text-xs text-ink-500">{[w.artist, w.year].filter(Boolean).join(' · ')}</div>
               <div className="truncate text-xs text-ink-500">{[w.country, w.label, w.catno].filter(Boolean).join(' · ')}</div>

@@ -3,6 +3,7 @@ import path from 'node:path'
 import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
+import { compress } from 'hono/compress'
 import { logger } from 'hono/logger'
 import { ensureAdmin, purgeExpiredSessions } from './auth.js'
 import { purgeOldEvents } from './events.js'
@@ -27,6 +28,7 @@ purgeOldEvents()
 setInterval(purgeOldEvents, 24 * 3_600_000).unref()
 
 const app = new Hono()
+app.use('/*', compress())
 app.use('/api/*', logger())
 app.get('/api/health', (c) => c.json({ ok: true }))
 app.route('/api/auth', authRoutes)

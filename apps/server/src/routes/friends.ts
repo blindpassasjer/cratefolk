@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import { Hono } from 'hono'
 import { requireUser, type AppEnv } from '../auth.js'
 import { db } from '../db.js'
-import { coverPath } from '../releases.js'
+import { coverFile } from '../releases.js'
 
 // Read-only browsing of other friends' collections. Each friend opts in on their Account page; grades,
 // notes and prices are never included here.
@@ -86,7 +86,7 @@ friendRoutes.get('/:id', (c) => {
   return c.json({ name: friend.name, collection, wishlist })
 })
 
-friendRoutes.get('/:id/cover/:releaseId', (c) => {
+friendRoutes.get('/:id/cover/:releaseId', async (c) => {
   const friend = findFriend(Number(c.req.param('id')), c.get('user').id)
   const releaseId = Number(c.req.param('releaseId'))
   const visible =
@@ -94,7 +94,7 @@ friendRoutes.get('/:id/cover/:releaseId', (c) => {
     Number.isInteger(releaseId) &&
     ((friend.collection && db.prepare('SELECT 1 FROM copies WHERE release_id = ? AND (user_id = ? OR co_owner_id = ?)').get(releaseId, friend.id, friend.id)) ||
       (friend.wishlist && db.prepare('SELECT 1 FROM wishlist WHERE release_id = ? AND user_id = ?').get(releaseId, friend.id)))
-  const file = coverPath(releaseId)
-  if (!visible || !fs.existsSync(file)) return c.json({ error: 'No cover' }, 404)
-  return c.body(fs.readFileSync(file), 200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'private, max-age=3600' })
+  const file = visible ? await coverFile(releaseId, c.req.query('size') === 'thumb') : null
+  if (!file) return c.json({ error: 'No cover' }, 404)
+  return c.body(await fs.promises.readFile(file), 200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'private, max-age=3600' })
 })

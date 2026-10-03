@@ -5,6 +5,9 @@
 ### Added
 - **Choose your shop links.** Account → Shop links lets you pick which shops get "Also search" links on your wishlist and record pages: eBay, Bandcamp, Amazon, Vinylpladen, Platekompaniet, FINN.no, Tradera, CDON, HHV, Deejay.de, Record Shop X, Juno, Rough Trade, Norman, Boomkat and Amoeba. The links open each shop's own search, so no prices are shown. eBay and Bandcamp stay on by default.
 
+### Changed
+- **Faster, smoother record grids, especially in Safari.** Grids now load small 480px covers instead of the full-size images (the record page still shows the full one). The small copies are made on first view and saved next to the originals in `data/covers`, so existing collections need no migration. The sticky header no longer blurs what scrolls under it, cover shadows are lighter, and the server now compresses API and app responses.
+
 ### Upgrading
 A database migration runs automatically on start (a new shops preference). Back up `data/` first: older versions can't read a migrated database.
 

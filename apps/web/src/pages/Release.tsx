@@ -200,7 +200,7 @@ export default function Release() {
       </Link>
 
       <div className="grid gap-8 md:grid-cols-[320px_1fr]">
-        <Cover releaseId={r.id} hasCover={!!r.hasCover} className="w-full max-w-sm rounded-lg shadow-2xl shadow-black/50 ring-1 ring-ink-800" />
+        <Cover full releaseId={r.id} hasCover={!!r.hasCover} className="w-full max-w-sm rounded-lg shadow-2xl shadow-black/50 ring-1 ring-ink-800" />
         <div className="space-y-6">
           <div>
             <h1 className="text-3xl font-semibold tracking-tight">{r.title}</h1>

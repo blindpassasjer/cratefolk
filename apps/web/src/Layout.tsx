@@ -23,7 +23,7 @@ export default function Layout() {
       <div className="min-h-screen lg:flex">
         <Sidebar open={open} onClose={() => setOpen(false)} />
         <div className="min-w-0 flex-1">
-          <header className="sticky top-0 z-10 flex h-14 items-center gap-3 border-b border-ink-800 bg-ink-950/80 px-4 backdrop-blur">
+          <header className="sticky top-0 z-10 flex h-14 items-center gap-3 border-b border-ink-800 bg-ink-950 px-4">
             <button onClick={() => setOpen(true)} aria-label="Open menu" aria-expanded={open} className="-ml-1.5 rounded-md p-1.5 text-ink-300 hover:text-ink-100 lg:hidden">
               <Menu className="size-5" />
             </button>

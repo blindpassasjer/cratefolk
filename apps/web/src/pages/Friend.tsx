@@ -110,7 +110,7 @@ export default function Friend() {
                 releaseId={i.releaseId}
                 hasCover={!!i.hasCover}
                 src={`/api/friends/${id}/cover/${i.releaseId}`}
-                className="rounded-md shadow-lg shadow-black/40 ring-1 ring-ink-800 transition group-hover:-translate-y-0.5 group-hover:ring-wax/60"
+                className="rounded-md shadow-sm shadow-black/40 ring-1 ring-ink-800 transition group-hover:-translate-y-0.5 group-hover:ring-wax/60"
               />
               {i.copies > 1 && <span className="absolute right-2 top-2 rounded-md bg-black/60 px-1.5 py-0.5 text-xs text-white">×{i.copies}</span>}
               {!!i.shared && (

@@ -6,7 +6,7 @@ import { db } from '../db.js'
 import { DiscogsError } from '../discogs.js'
 import { logEvent } from '../events.js'
 import { triviaFor } from '../trivia.js'
-import { canAccessRelease, coverPath, createManualRelease, deleteManualRelease, ensureRelease, isCreator, updateManualRelease } from '../releases.js'
+import { canAccessRelease, coverFile, createManualRelease, deleteManualRelease, ensureRelease, isCreator, updateManualRelease } from '../releases.js'
 
 export const collectionRoutes = new Hono<AppEnv>()
 export const releaseRoutes = new Hono<AppEnv>()
@@ -224,11 +224,11 @@ releaseRoutes.delete('/:id', (c) => {
   return c.json({ ok: true })
 })
 
-releaseRoutes.get('/:id/cover', (c) => {
+releaseRoutes.get('/:id/cover', async (c) => {
   const id = Number(c.req.param('id'))
-  const file = coverPath(id)
-  if (!Number.isInteger(id) || !canAccessRelease(id, c.get('user').id) || !fs.existsSync(file)) return c.json({ error: 'No cover' }, 404)
-  return c.body(fs.readFileSync(file), 200, {
+  const file = Number.isInteger(id) && canAccessRelease(id, c.get('user').id) ? await coverFile(id, c.req.query('size') === 'thumb') : null
+  if (!file) return c.json({ error: 'No cover' }, 404)
+  return c.body(await fs.promises.readFile(file), 200, {
     'Content-Type': 'image/jpeg',
     // Discogs covers never change; a manual record's cover can be replaced when it is edited.
     'Cache-Control': id > 0 ? 'private, max-age=31536000, immutable' : 'private, no-cache',

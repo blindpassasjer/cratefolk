@@ -4,7 +4,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { requireUser, type AppEnv } from '../auth.js'
 import { db } from '../db.js'
-import { coverPath } from '../releases.js'
+import { coverFile } from '../releases.js'
 
 type Kind = 'all' | 'group' | 'wishlist' | 'forsale'
 
@@ -145,14 +145,14 @@ function inShare(share: ShareRow, releaseId: number): boolean {
   return q('SELECT 1 FROM copies WHERE user_id = ? AND release_id = ?', share.user_id, releaseId)
 }
 
-publicShareRoutes.get('/:token/cover/:releaseId', (c) => {
+publicShareRoutes.get('/:token/cover/:releaseId', async (c) => {
   const share = lookup(c.req.param('token'))
   const releaseId = Number(c.req.param('releaseId'))
   // Only covers of records that are actually in the shared set can be fetched.
   if (!share || !Number.isInteger(releaseId) || !inShare(share, releaseId)) {
     return c.json({ error: 'Not found' }, 404)
   }
-  const file = coverPath(releaseId)
-  if (!fs.existsSync(file)) return c.json({ error: 'No cover' }, 404)
-  return c.body(fs.readFileSync(file), 200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=86400' })
+  const file = await coverFile(releaseId, c.req.query('size') === 'thumb')
+  if (!file) return c.json({ error: 'No cover' }, 404)
+  return c.body(await fs.promises.readFile(file), 200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=86400' })
 })

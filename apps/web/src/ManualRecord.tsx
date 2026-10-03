@@ -143,7 +143,7 @@ export default function ManualRecord({
               {cover ? (
                 <img src={cover} alt="" className="size-full object-cover" />
               ) : hasCover && release ? (
-                <Cover releaseId={release.id} hasCover className="size-full" />
+                <Cover full releaseId={release.id} hasCover className="size-full" />
               ) : (
                 <Disc3 className="size-8 text-ink-700" />
               )}
