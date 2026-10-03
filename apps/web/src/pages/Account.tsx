@@ -95,8 +95,8 @@ export default function Account() {
     <div className="space-y-10">
       <div className="space-y-6">
         <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
-        <div className="grid items-start gap-6 md:grid-cols-2 xl:grid-cols-3">
-
+        <div className="grid items-start gap-6 lg:grid-cols-2">
+          <div className="space-y-6">
         <Card title="Profile" hint={isAdmin ? 'The admin email is set with ADMIN_EMAIL in your environment, so only the name can be changed here.' : undefined}>
           <form onSubmit={saveProfile} className="space-y-4">
             <Field label="Name">
@@ -118,6 +118,17 @@ export default function Account() {
           </form>
         </Card>
 
+        <Card title="Preferences" hint="Marketplace prices on your wishlist are shown in this currency. NOK is used for your asking prices, but Discogs does not offer it, so marketplace prices show in EUR.">
+          <Field label="Currency">
+            <select className={input} value={user?.currency ?? 'USD'} onChange={(e) => void setCurrency(e.target.value)}>
+              {CURRENCIES.map((c) => (
+                <option key={c}>{c}</option>
+              ))}
+            </select>
+          </Field>
+        </Card>
+          </div>
+          <div className="space-y-6">
         <Card title="Password" hint={isAdmin ? 'The admin password is set with ADMIN_PASSWORD in your environment. Change it there and restart.' : 'Changing it signs you out of your other devices.'}>
           {!isAdmin && (
             <form onSubmit={savePassword} className="space-y-4">
@@ -155,16 +166,7 @@ export default function Account() {
             </label>
           ))}
         </Card>
-
-        <Card title="Preferences" hint="Marketplace prices on your wishlist are shown in this currency. NOK is used for your asking prices, but Discogs does not offer it, so marketplace prices show in EUR.">
-          <Field label="Currency">
-            <select className={input} value={user?.currency ?? 'USD'} onChange={(e) => void setCurrency(e.target.value)}>
-              {CURRENCIES.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
-          </Field>
-        </Card>
+          </div>
         </div>
       </div>
       {isAdmin && <AdminUsers />}

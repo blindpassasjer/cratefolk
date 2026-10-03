@@ -91,6 +91,7 @@ export default function AdminUsers() {
     <section className="space-y-4">
       <h2 className="text-xl font-semibold tracking-tight">Users</h2>
 
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,22rem)_1fr]">
       <div className="flex items-center justify-between gap-4 rounded-xl border border-ink-800 bg-ink-900/60 p-4">
         <div className="space-y-0.5">
           <h3 className="text-sm font-medium">Registration</h3>
@@ -110,12 +111,13 @@ export default function AdminUsers() {
         </button>
       </div>
 
-      <form onSubmit={create} className="grid gap-3 rounded-xl border border-ink-800 bg-ink-900/60 p-4 sm:grid-cols-[1fr_1fr_1fr_auto]">
+      <form onSubmit={create} className="grid gap-3 rounded-xl border border-ink-800 bg-ink-900/60 p-4 sm:grid-cols-2">
         <input className={input} placeholder="Name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         <input className={input} type="email" placeholder="Email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
         <input className={input} type="password" placeholder="Password (8+ chars)" minLength={8} required autoComplete="new-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
-        <button className="rounded-md bg-wax px-4 py-2 text-sm font-medium text-on-wax hover:bg-wax-hover">Create user</button>
+        <button className="rounded-md bg-wax px-4 py-2 text-sm font-medium text-on-wax hover:bg-wax-hover sm:col-span-2">Create user</button>
       </form>
+      </div>
 
       {loadError && <p className="text-sm text-danger">{loadError}</p>}
 
