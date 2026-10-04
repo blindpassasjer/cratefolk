@@ -202,6 +202,8 @@ const migrations: string[] = [
   -- A user's own Discogs account: the username is shown in settings, the personal access token is stored encrypted (see secrets.ts).
   ALTER TABLE users ADD COLUMN discogs_username TEXT;
   ALTER TABLE users ADD COLUMN discogs_token TEXT;
+  `,
+  `
   -- Whether changes made in Cratelog are sent to that Discogs account.
   ALTER TABLE users ADD COLUMN discogs_push INTEGER NOT NULL DEFAULT 1;
   -- Links a copy to its instance in the user's Discogs collection (instance IDs are per user).
