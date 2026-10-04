@@ -1,15 +1,23 @@
 # Changelog
 
-## Unreleased
+## 0.6.0 (2026-10-04)
 
 ### Added
+- **Discogs sync.** Account → Discogs lets each user connect their own Discogs account with a personal access token (Cratelog never asks for your password; the token is stored encrypted on the server). **Sync now** merges your collection and wantlist in both directions: records missing on either side are added, and for copies on both, grades and notes follow whichever side changed since the last sync (Cratelog wins if both did). Records you add, wishlist, grade or annotate in Cratelog are also sent to Discogs as you make them, which you can switch off ("Send changes to Discogs"). Records added by hand are never sent.
+- **Optionally sync deletions.** "Also sync deletions" (off by default) carries removals over: a record you delete here is removed from Discogs at the next sync, and one you remove on Discogs is removed here. If Discogs seems to be missing a large share of your records, the sync stops and changes nothing. Either way, a record you delete no longer comes back at the next sync.
 - **Scan a barcode to add a record.** The Add record dialog has a scan button that opens your camera, reads the barcode on the sleeve and runs the search for you. It needs HTTPS (or `localhost`), so the button is hidden over plain HTTP and in the demo. Safari and Firefox load a small decoder the first time you scan.
 
 ### Changed
-- **Account page is grouped into sections.** Settings are now under Sign-in, Preferences and Privacy headings, each with a short description.
+- **Account page is laid out in two columns** (from tablet width up) and grouped into sections under Sign-in, Preferences and Privacy headings, each with a short description.
+- **Reworked Users section for admins.** Registration, new user and the user list now share one card, and the table is a compact list with a "⋯" menu per user.
+- **One reset dialog for passwords.** "Reset password…" lets an admin either set a new password or create a one-time link, instead of two separate actions.
 
 ### Fixed
 - The Vinylpladen shop link now opens the shop's current search page.
+- Added the standard `mobile-web-app-capable` meta tag, which removes a console warning in Chrome.
+
+### Upgrading
+Database migrations run automatically on start (Discogs connection, sync bookkeeping). Back up `data/` first: older versions can't read a migrated database. The new `data/secret.key` encrypts users' saved Discogs tokens, so include it in your backups and keep them private.
 
 ## 0.5.2 (2026-10-03)
 
