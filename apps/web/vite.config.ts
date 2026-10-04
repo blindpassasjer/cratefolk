@@ -11,6 +11,7 @@ export default defineConfig(({ command }) => ({
   plugins: [react(), tailwindcss()],
   server: {
     port: 5173,
+    allowedHosts: ['test.manriquez.no'],
     proxy: demo ? undefined : { '/api': 'http://localhost:6170' },
   },
 }))

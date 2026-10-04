@@ -149,7 +149,7 @@ export default function Account() {
       <div className="space-y-8">
         <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
 
-        <div className="columns-1 gap-6 lg:columns-2">
+        <div className="columns-1 gap-6 md:columns-2">
 
             <Card
               title="Profile"
@@ -331,9 +331,11 @@ export default function Account() {
               </label>
             ))}
           </Card>
+          {isAdmin && (
+            <AdminUsers />
+          )}
         </div>
       </div>
-      {isAdmin && <AdminUsers />}
     </div>
   );
 }

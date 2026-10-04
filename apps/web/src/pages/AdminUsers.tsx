@@ -1,4 +1,4 @@
-import { Check, Copy } from 'lucide-react'
+import { Check, Copy, MoreHorizontal } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { api, type AdminUser } from '../api'
 import { useDialog, useToast } from '../notify'
@@ -9,11 +9,12 @@ const input =
 export default function AdminUsers() {
   const [users, setUsers] = useState<AdminUser[]>([])
   const toast = useToast()
-  const { confirm, prompt } = useDialog()
+  const { confirm } = useDialog()
   const [loadError, setLoadError] = useState<string | null>(null)
   const [form, setForm] = useState({ name: '', email: '', password: '' })
   const [regOpen, setRegOpen] = useState<boolean | null>(null)
-  const [link, setLink] = useState<{ email: string; url: string } | null>(null)
+  const [resetFor, setResetFor] = useState<AdminUser | null>(null)
+  const [menu, setMenu] = useState<number | null>(null)
 
   const load = useCallback(async () => {
     setUsers((await api<{ users: AdminUser[] }>('/admin/users')).users)
@@ -54,27 +55,6 @@ export default function AdminUsers() {
     }, `Created an account for ${form.email}`)
   }
 
-  async function resetPassword(u: AdminUser) {
-    const password = await prompt({
-      title: 'Reset password',
-      message: `Choose a new password for ${u.email}. They will be signed out everywhere.`,
-      label: 'New password (8+ characters)',
-      type: 'password',
-      confirmLabel: 'Reset password',
-      validate: (v) => (v.length < 8 ? 'Use at least 8 characters' : null),
-    })
-    if (password) void run(() => api(`/admin/users/${u.id}`, { method: 'PATCH', json: { password } }), `Password reset for ${u.email}`)
-  }
-
-  async function createResetLink(u: AdminUser) {
-    try {
-      const { token } = await api<{ token: string }>(`/admin/users/${u.id}/reset-link`, { method: 'POST' })
-      setLink({ email: u.email, url: `${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, '')}/reset/${token}` })
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not create a reset link')
-    }
-  }
-
   async function remove(u: AdminUser) {
     const ok = await confirm({
       title: 'Delete this user?',
@@ -85,14 +65,13 @@ export default function AdminUsers() {
     if (ok) void run(() => api(`/admin/users/${u.id}`, { method: 'DELETE' }), `Deleted ${u.email}`)
   }
 
-  const action = 'text-ink-300 hover:text-ink-100'
+  const item = 'block w-full px-3 py-2 text-left text-ink-300 hover:bg-ink-800 hover:text-ink-100'
 
   return (
-    <section className="space-y-4">
-      <h2 className="text-xl font-semibold tracking-tight">Users</h2>
+    <section className="mb-6 break-inside-avoid space-y-5 rounded-xl border border-ink-800 bg-ink-900/60 p-5">
+      <h2 className="font-medium">Users</h2>
 
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,22rem)_1fr]">
-      <div className="flex items-center justify-between gap-4 rounded-xl border border-ink-800 bg-ink-900/60 p-4">
+      <div className="flex items-center justify-between gap-4">
         <div className="space-y-0.5">
           <h3 className="text-sm font-medium">Registration</h3>
           <p className="text-sm text-ink-300">
@@ -111,62 +90,70 @@ export default function AdminUsers() {
         </button>
       </div>
 
-      <form onSubmit={create} className="grid gap-3 rounded-xl border border-ink-800 bg-ink-900/60 p-4 sm:grid-cols-2">
-        <input className={input} placeholder="Name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-        <input className={input} type="email" placeholder="Email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-        <input className={input} type="password" placeholder="Password (8+ chars)" minLength={8} required autoComplete="new-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
-        <button className="rounded-md bg-wax px-4 py-2 text-sm font-medium text-on-wax hover:bg-wax-hover sm:col-span-2">Create user</button>
+      <form onSubmit={create} className="space-y-3 border-t border-ink-800 pt-5">
+        <h3 className="text-sm font-medium">New user</h3>
+        <input className={`${input} w-full`} placeholder="Name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+        <input className={`${input} w-full`} type="email" placeholder="Email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+        <input className={`${input} w-full`} type="password" placeholder="Password (8+ chars)" minLength={8} required autoComplete="new-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+        <button className="rounded-md bg-wax px-4 py-2 text-sm font-medium text-on-wax hover:bg-wax-hover">Create user</button>
       </form>
-      </div>
 
       {loadError && <p className="text-sm text-danger">{loadError}</p>}
 
-      <div className="overflow-x-auto rounded-xl border border-ink-800">
-        <table className="w-full min-w-[40rem] text-left text-sm">
-          <thead className="border-b border-ink-800 text-ink-500">
-            <tr>
-              <th className="px-4 py-3 font-medium">Name</th>
-              <th className="px-4 py-3 font-medium">Email</th>
-              <th className="px-4 py-3 font-medium">Role</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((u) => (
-              <tr key={u.id} className="border-b border-ink-800 last:border-0">
-                <td className="px-4 py-3">{u.name}</td>
-                <td className="px-4 py-3 text-ink-300">{u.email}</td>
-                <td className="px-4 py-3 text-ink-300">{u.role}</td>
-                <td className="px-4 py-3 text-ink-300">{u.disabled ? 'Disabled' : 'Active'}</td>
-                <td className="space-x-4 px-4 py-3 text-right">
-                  {u.role !== 'admin' && (
-                    <>
-                      <button className={action} onClick={() => void createResetLink(u)}>Reset link</button>
-                      <button className={action} onClick={() => void resetPassword(u)}>Set password</button>
+      <ul className="-mx-5 divide-y divide-ink-800 border-t border-ink-800">
+        {users.map((u) => (
+          <li key={u.id} className="flex items-center gap-3 px-5 py-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 text-sm">
+                <span className={`truncate ${u.disabled ? 'text-ink-500' : ''}`}>{u.name}</span>
+                {u.role === 'admin' && <span className="rounded bg-ink-800 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-ink-300">Admin</span>}
+                {u.disabled && <span className="rounded bg-ink-800 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-ink-500">Disabled</span>}
+              </div>
+              <div className="truncate text-xs text-ink-500">{u.email}</div>
+            </div>
+            {u.role !== 'admin' && (
+              <div className="relative">
+                <button
+                  aria-label={`Actions for ${u.email}`}
+                  aria-haspopup="menu"
+                  aria-expanded={menu === u.id}
+                  onClick={() => setMenu(menu === u.id ? null : u.id)}
+                  className="rounded-md p-1.5 text-ink-300 hover:bg-ink-800 hover:text-ink-100"
+                >
+                  <MoreHorizontal className="size-4" />
+                </button>
+                {menu === u.id && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setMenu(null)} />
+                    <div role="menu" className="absolute right-0 z-20 mt-1 w-44 overflow-hidden rounded-lg border border-ink-700 bg-ink-900 py-1 text-sm shadow-xl" onClick={() => setMenu(null)}>
+                      <button role="menuitem" className={item} onClick={() => setResetFor(u)}>Reset password…</button>
                       <button
-                        className={action}
+                        role="menuitem"
+                        className={item}
                         onClick={() => void run(() => api(`/admin/users/${u.id}`, { method: 'PATCH', json: { disabled: !u.disabled } }), u.disabled ? `Enabled ${u.email}` : `Disabled ${u.email}`)}
                       >
-                        {u.disabled ? 'Enable' : 'Disable'}
+                        {u.disabled ? 'Enable account' : 'Disable account'}
                       </button>
-                      <button className="text-danger hover:text-danger" onClick={() => void remove(u)}>Delete</button>
-                    </>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                      <button role="menuitem" className={`${item} text-danger hover:text-danger`} onClick={() => void remove(u)}>Delete…</button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
 
-      {link && <ResetLinkDialog link={link} onClose={() => setLink(null)} />}
+      {resetFor && <ResetPasswordDialog user={resetFor} onClose={() => setResetFor(null)} />}
     </section>
   )
 }
 
-/** Shows a freshly made reset link once, for the admin to copy and send to the user. */
-function ResetLinkDialog({ link, onClose }: { link: { email: string; url: string }; onClose: () => void }) {
+/** One place to get a user back in: set a password now, or make a one-time link for them to choose their own. */
+function ResetPasswordDialog({ user, onClose }: { user: AdminUser; onClose: () => void }) {
+  const [password, setPassword] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [url, setUrl] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const field = useRef<HTMLInputElement>(null)
   const toast = useToast()
@@ -177,9 +164,32 @@ function ResetLinkDialog({ link, onClose }: { link: { email: string; url: string
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  async function copy() {
+  async function setNew(e: FormEvent) {
+    e.preventDefault()
+    setSaving(true)
     try {
-      await navigator.clipboard.writeText(link.url)
+      await api(`/admin/users/${user.id}`, { method: 'PATCH', json: { password } })
+      toast.success(`Password reset for ${user.email}`)
+      onClose()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not reset the password')
+      setSaving(false)
+    }
+  }
+
+  async function makeLink() {
+    try {
+      const { token } = await api<{ token: string }>(`/admin/users/${user.id}/reset-link`, { method: 'POST' })
+      setUrl(`${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, '')}/reset/${token}`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not create a reset link')
+    }
+  }
+
+  async function copy() {
+    if (!url) return
+    try {
+      await navigator.clipboard.writeText(url)
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch {
@@ -190,17 +200,38 @@ function ResetLinkDialog({ link, onClose }: { link: { email: string; url: string
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal="true" aria-label="Password reset link" className="w-full max-w-md space-y-4 rounded-xl border border-ink-700 bg-ink-900 p-5 shadow-2xl">
-        <div className="space-y-1.5">
-          <h2 className="font-semibold">Reset link for {link.email}</h2>
-          <p className="text-sm text-ink-300">Send them this link. It works once and expires in 24 hours. Creating a new link replaces this one, and you can't view it again after closing.</p>
+      <div role="dialog" aria-modal="true" aria-label="Reset password" className="w-full max-w-md space-y-5 rounded-xl border border-ink-700 bg-ink-900 p-5 shadow-2xl">
+        <div className="space-y-1">
+          <h2 className="font-semibold">Reset password</h2>
+          <p className="truncate text-sm text-ink-300">{user.email}</p>
         </div>
-        <div className="flex gap-2">
-          <input ref={field} readOnly value={link.url} onFocus={(e) => e.currentTarget.select()} className="min-w-0 flex-1 rounded-md border border-ink-700 bg-ink-950 px-2 py-1.5 text-xs outline-none focus:border-wax" />
-          <button onClick={() => void copy()} aria-label="Copy link" className="flex items-center gap-1 rounded-md border border-ink-700 px-2.5 hover:border-wax">
-            {copied ? <Check className="size-4 text-wax" /> : <Copy className="size-4" />}
-          </button>
+
+        <form onSubmit={setNew} className="space-y-2">
+          <label className="block space-y-1.5 text-sm text-ink-300">
+            Set a new password
+            <input className={`${input} w-full`} type="password" minLength={8} required autoComplete="new-password" placeholder="8+ characters" value={password} onChange={(e) => setPassword(e.target.value)} />
+          </label>
+          <p className="text-xs text-ink-500">They will be signed out everywhere.</p>
+          <button disabled={saving} className="rounded-md bg-wax px-4 py-2 text-sm font-medium text-on-wax hover:bg-wax-hover disabled:opacity-60">Set password</button>
+        </form>
+
+        <div className="space-y-2 border-t border-ink-800 pt-4">
+          <p className="text-sm text-ink-300">Or let them choose their own</p>
+          {url ? (
+            <>
+              <div className="flex gap-2">
+                <input ref={field} readOnly value={url} onFocus={(e) => e.currentTarget.select()} className="min-w-0 flex-1 rounded-md border border-ink-700 bg-ink-950 px-2 py-1.5 text-xs outline-none focus:border-wax" />
+                <button onClick={() => void copy()} aria-label="Copy link" className="flex items-center rounded-md border border-ink-700 px-2.5 hover:border-wax">
+                  {copied ? <Check className="size-4 text-wax" /> : <Copy className="size-4" />}
+                </button>
+              </div>
+              <p className="text-xs text-ink-500">Works once and expires in 24 hours. Making a new link replaces this one, and you can't view it again after closing.</p>
+            </>
+          ) : (
+            <button onClick={() => void makeLink()} className="rounded-md border border-ink-700 px-4 py-2 text-sm hover:border-ink-500">Create one-time link</button>
+          )}
         </div>
+
         <div className="flex justify-end">
           <button onClick={onClose} className="rounded-md border border-ink-700 px-4 py-2 text-sm hover:border-ink-500">Done</button>
         </div>
