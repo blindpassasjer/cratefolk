@@ -204,7 +204,7 @@ const migrations: string[] = [
   ALTER TABLE users ADD COLUMN discogs_token TEXT;
   `,
   `
-  -- Whether changes made in Cratelog are sent to that Discogs account.
+  -- Whether changes made in Cratefolk are sent to that Discogs account.
   ALTER TABLE users ADD COLUMN discogs_push INTEGER NOT NULL DEFAULT 1;
   -- Links a copy to its instance in the user's Discogs collection (instance IDs are per user).
   ALTER TABLE copies ADD COLUMN discogs_instance_id INTEGER;
@@ -234,10 +234,10 @@ const migrations: string[] = [
 ]
 
 fs.mkdirSync(config.dataDir, { recursive: true })
-// Cratelog was called WaxCrate before 0.4.0: adopt an existing database (and its WAL files) under the new name.
-const dbFile = path.join(config.dataDir, 'cratelog.db')
-const legacyDbFile = path.join(config.dataDir, 'waxcrate.db')
-if (!fs.existsSync(dbFile) && fs.existsSync(legacyDbFile)) {
+// Cratefolk was called Cratelog (0.4.0-0.6.x) and WaxCrate before that: adopt an existing database (and its WAL files) under the new name.
+const dbFile = path.join(config.dataDir, 'cratefolk.db')
+const legacyDbFile = ['cratelog.db', 'waxcrate.db'].map((name) => path.join(config.dataDir, name)).find((file) => fs.existsSync(file))
+if (!fs.existsSync(dbFile) && legacyDbFile) {
   for (const suffix of ['', '-wal', '-shm']) if (fs.existsSync(legacyDbFile + suffix)) fs.renameSync(legacyDbFile + suffix, dbFile + suffix)
 }
 export const db = new Database(dbFile)

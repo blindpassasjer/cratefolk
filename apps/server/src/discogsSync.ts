@@ -3,9 +3,9 @@ import { DiscogsError, discogsRequest } from './discogs.js'
 import { ensureRelease } from './releases.js'
 import { decrypt } from './secrets.js'
 
-// Cratelog's database stays the source of truth. Changes made here are pushed to the user's Discogs
+// Cratefolk's database stays the source of truth. Changes made here are pushed to the user's Discogs
 // account in the background (adds, grades, notes). "Sync" then merges both sides per record: each copy
-// remembers what Discogs held at the last sync, so whichever side changed since wins, and Cratelog
+// remembers what Discogs held at the last sync, so whichever side changed since wins, and Cratefolk
 // wins when both did. Deletions only sync when the user opts in.
 
 interface Account {
@@ -278,7 +278,7 @@ type Action = 'keep' | 'pull' | 'push'
 
 /**
  * Decides which side wins for one field. `s` is what Discogs held at the last sync (undefined if there was none):
- * a side that changed since then wins, and Cratelog wins if both did. Without a snapshot Cratelog wins unless it is blank.
+ * a side that changed since then wins, and Cratefolk wins if both did. Without a snapshot Cratefolk wins unless it is blank.
  * A grade can't be cleared on Discogs, so a blank grade here never overwrites one there.
  */
 function decide(l: string | null, r: string | null, s: string | null | undefined, isGrade: boolean): Action {

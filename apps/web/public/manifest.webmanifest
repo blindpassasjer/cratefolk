@@ -1,6 +1,6 @@
 {
-  "name": "Cratelog",
-  "short_name": "Cratelog",
+  "name": "Cratefolk",
+  "short_name": "Cratefolk",
   "description": "Your vinyl collection, in a crate.",
   "start_url": "./",
   "scope": "./",

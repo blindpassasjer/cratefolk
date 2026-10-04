@@ -11,10 +11,10 @@ const scrypt = promisify(crypto.scrypt) as (
   keylen: number,
 ) => Promise<Buffer>
 
-const COOKIE = 'cratelog_session'
-// Sessions started before the 0.4.0 rename carry the old cookie name; keep honouring it until it expires or is replaced.
-const LEGACY_COOKIE = 'waxcrate_session'
-const sessionToken = (c: Context) => getCookie(c, COOKIE) ?? getCookie(c, LEGACY_COOKIE)
+const COOKIE = 'cratefolk_session'
+// Sessions started before the renames (WaxCrate, then Cratelog) carry an old cookie name; keep honouring them until they expire or are replaced.
+const LEGACY_COOKIES = ['cratelog_session', 'waxcrate_session']
+const sessionToken = (c: Context) => [COOKIE, ...LEGACY_COOKIES].map((name) => getCookie(c, name)).find(Boolean)
 const SESSION_DAYS = 30
 
 interface SessionUser {
@@ -61,14 +61,14 @@ export function createSession(c: Context, userId: number): void {
     path: '/',
     maxAge: SESSION_DAYS * 86_400,
   })
-  deleteCookie(c, LEGACY_COOKIE, { path: '/' })
+  for (const name of LEGACY_COOKIES) deleteCookie(c, name, { path: '/' })
 }
 
 export function destroySession(c: Context): void {
   const token = sessionToken(c)
   if (token) db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(sha256(token))
   deleteCookie(c, COOKIE, { path: '/' })
-  deleteCookie(c, LEGACY_COOKIE, { path: '/' })
+  for (const name of LEGACY_COOKIES) deleteCookie(c, name, { path: '/' })
 }
 
 /** After a password change: sign out every other device but keep the one making the change. */

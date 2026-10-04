@@ -1,14 +1,14 @@
 import { Image } from 'lucide-react'
 import { useState } from 'react'
 
-const SIZE_KEY = 'cratelog-cover-size'
+const SIZE_KEY = 'cratefolk-cover-size'
 const SIZE_MIN = 110
 const SIZE_MAX = 340
 const SIZE_DEFAULT = 190
 
 function loadSize() {
   try {
-    const n = Number(localStorage.getItem(SIZE_KEY) ?? localStorage.getItem('waxcrate-cover-size'))
+    const n = Number(localStorage.getItem(SIZE_KEY) ?? localStorage.getItem('cratelog-cover-size') ?? localStorage.getItem('waxcrate-cover-size'))
     if (n >= SIZE_MIN && n <= SIZE_MAX) return n
   } catch {
     /* storage unavailable: fall back to the default */

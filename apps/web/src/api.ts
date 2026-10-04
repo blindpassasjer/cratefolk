@@ -20,7 +20,7 @@ async function realApi<T>(path: string, init?: RequestInit & { json?: unknown })
   })
   const data = await res.json().catch(() => ({}))
   // Session expired or account disabled mid-use: let the auth provider send the user back to the login page.
-  if (res.status === 401 && !path.startsWith('/auth/login')) window.dispatchEvent(new Event('cratelog:unauthorized'))
+  if (res.status === 401 && !path.startsWith('/auth/login')) window.dispatchEvent(new Event('cratefolk:unauthorized'))
   if (!res.ok) throw new ApiError((data as { error?: string }).error ?? res.statusText, res.status)
   return data as T
 }

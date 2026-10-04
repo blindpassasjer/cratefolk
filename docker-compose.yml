@@ -1,6 +1,6 @@
 services:
-  cratelog:
-    image: ghcr.io/blindpassasjer/cratelog:latest
+  cratefolk:
+    image: ghcr.io/blindpassasjer/cratefolk:latest
     build: .
     restart: unless-stopped
     ports:

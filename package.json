@@ -1,7 +1,7 @@
 {
-  "name": "cratelog",
+  "name": "cratefolk",
   "private": true,
-  "version": "0.6.0",
+  "version": "0.7.0",
   "license": "Apache-2.0",
   "type": "module",
   "workspaces": [
@@ -11,12 +11,12 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "concurrently -n server,web -c cyan,magenta \"npm run dev -w @cratelog/server\" \"npm run dev -w @cratelog/web\"",
-    "build": "npm run build -w @cratelog/web && npm run build -w @cratelog/server",
-    "build:demo": "VITE_DEMO=true npm run build -w @cratelog/web",
-    "dev:demo": "VITE_DEMO=true npm run dev -w @cratelog/web",
-    "start": "npm run start -w @cratelog/server",
-    "typecheck": "npm run typecheck -w @cratelog/server && npm run typecheck -w @cratelog/web"
+    "dev": "concurrently -n server,web -c cyan,magenta \"npm run dev -w @cratefolk/server\" \"npm run dev -w @cratefolk/web\"",
+    "build": "npm run build -w @cratefolk/web && npm run build -w @cratefolk/server",
+    "build:demo": "VITE_DEMO=true npm run build -w @cratefolk/web",
+    "dev:demo": "VITE_DEMO=true npm run dev -w @cratefolk/web",
+    "start": "npm run start -w @cratefolk/server",
+    "typecheck": "npm run typecheck -w @cratefolk/server && npm run typecheck -w @cratefolk/web"
   },
   "devDependencies": {
     "concurrently": "^9.0.0"

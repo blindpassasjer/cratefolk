@@ -2,7 +2,7 @@ import { Moon, Sun } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 type Theme = 'light' | 'dark'
-const KEY = 'cratelog-theme'
+const KEY = 'cratefolk-theme'
 
 const current = (): Theme => (document.documentElement.dataset.theme === 'light' ? 'light' : 'dark')
 

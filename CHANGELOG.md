@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.0 (2026-10-04)
+
+### Changed
+- **Cratelog is now Cratefolk.** Another vinyl and CD app already uses the name Cratelog, so the project has a new name. Nothing else changes: same features, same data.
+- The Docker image is now `ghcr.io/blindpassasjer/cratefolk` and the compose service is called `cratefolk`. The GitHub repository moves to `blindpassasjer/cratefolk` (the old address redirects), and the demo moves to `blindpassasjer.github.io/cratefolk/`.
+
+### Upgrading
+Point your compose file at the new image (`ghcr.io/blindpassasjer/cratefolk:latest`) and the service name `cratefolk`; the old `cratelog` image will not get new releases. Your `data/` folder is picked up as is: the database `cratelog.db` is renamed to `cratefolk.db` on first start, and existing sessions and browser settings (theme, cover size, feed state) carry over. Back up `data/` first: older versions can't read a migrated database.
+
 ## 0.6.0 (2026-10-04)
 
 ### Added

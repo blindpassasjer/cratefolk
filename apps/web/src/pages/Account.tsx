@@ -76,12 +76,12 @@ function DiscogsSync() {
       title: "Sync with Discogs?",
       message:
         (push
-          ? "Cratelog will add what is on your Discogs collection and wantlist but not here, add what is here but not on Discogs, and bring grades and notes in line (whichever side changed since the last sync wins; Cratelog wins if both did). "
-          : "Cratelog will add what is on your Discogs collection and wantlist but not here, and bring in grades and notes you changed on Discogs. Nothing is sent to Discogs. ") +
+          ? "Cratefolk will add what is on your Discogs collection and wantlist but not here, add what is here but not on Discogs, and bring grades and notes in line (whichever side changed since the last sync wins; Cratefolk wins if both did). "
+          : "Cratefolk will add what is on your Discogs collection and wantlist but not here, and bring in grades and notes you changed on Discogs. Nothing is sent to Discogs. ") +
         (deletes
           ? "Deletions are on: records you removed on one side are removed on the other too. "
           : "Nothing is deleted on either side. ") +
-        "Large collections take a while; you can keep using Cratelog.",
+        "Large collections take a while; you can keep using Cratefolk.",
       confirmLabel: "Start sync",
     });
     if (!ok) return;
@@ -440,7 +440,7 @@ export default function Account() {
 
             <Card
               title="Discogs"
-              hint="Connect your own Discogs account so Cratelog can work with your Discogs collection and wantlist. Cratelog never asks for your Discogs password."
+              hint="Connect your own Discogs account so Cratefolk can work with your Discogs collection and wantlist. Cratefolk never asks for your Discogs password."
             >
               {user?.discogsUsername ? (
                 <>
@@ -557,7 +557,7 @@ export default function Account() {
 
           <Card
             title="Sharing"
-            hint="Friends on this Cratelog can browse what you allow here. They only see which records you have, never your grades, notes or prices. Activity only shows for the parts of your Cratelog you share."
+            hint="Friends on this Cratefolk can browse what you allow here. They only see which records you have, never your grades, notes or prices. Activity only shows for the parts of your Cratefolk you share."
           >
             {(
               [

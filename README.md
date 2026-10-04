@@ -1,15 +1,15 @@
 <p align="center">
-  <img src="apps/web/public/favicon.svg" alt="Cratelog logo" width="96" height="96" />
+  <img src="apps/web/public/favicon.svg" alt="Cratefolk logo" width="96" height="96" />
 </p>
 
-<h1 align="center">Cratelog</h1>
+<h1 align="center">Cratefolk</h1>
 
 <p align="center">
   <strong>A self-hosted vinyl, CD and cassette collection manager. Your database is the source of truth; Discogs is the metadata source.</strong>
 </p>
 
 <p align="center">
-  <a href="https://blindpassasjer.github.io/cratelog/"><strong>Live demo</strong></a> ·
+  <a href="https://blindpassasjer.github.io/cratefolk/"><strong>Live demo</strong></a> ·
   <a href="#quick-start-docker-compose">Quick start</a> ·
   <a href="#build-it-yourself">Build it yourself</a> ·
   <a href="#features">Features</a> ·
@@ -18,22 +18,22 @@
 
 <p align="center">
   <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" /></a>
-  <a href="https://github.com/blindpassasjer/cratelog/pkgs/container/cratelog"><img alt="Docker image" src="https://img.shields.io/badge/ghcr.io-blindpassasjer%2Fcratelog-2496ED?logo=docker&logoColor=white" /></a>
+  <a href="https://github.com/blindpassasjer/cratefolk/pkgs/container/cratefolk"><img alt="Docker image" src="https://img.shields.io/badge/ghcr.io-blindpassasjer%2Fcratefolk-2496ED?logo=docker&logoColor=white" /></a>
   <img alt="Self-hosted" src="https://img.shields.io/badge/deployment-self--hosted-informational" />
   <a href="package.json"><img alt="Node" src="https://img.shields.io/badge/node-%3E%3D20-339933?logo=node.js&logoColor=white" /></a>
 </p>
 
 ---
 
-Cratelog keeps track of the vinyl records, CDs and cassettes you own, the ones you want, and the ones
-you're selling. Add a release by searching Discogs (one search box for name, catalog number or barcode) and Cratelog
+Cratefolk keeps track of the vinyl records, CDs and cassettes you own, the ones you want, and the ones
+you're selling. Add a release by searching Discogs (one search box for name, catalog number or barcode) and Cratefolk
 stores the metadata and cover in **your own SQLite database**, so your collection keeps working, and
 stays yours, even if Discogs changes or goes away.
 
 It runs on your own machine, NAS or VPS with one `docker compose up`. No subscriptions, no ads, no
 third party holding your collection.
 
-**[Try the live demo →](https://blindpassasjer.github.io/cratelog/)** — a static build with sample
+**[Try the live demo →](https://blindpassasjer.github.io/cratefolk/)** — a static build with sample
 records and a mocked, browser-only backend (see [Demo mode](#demo-mode)), so you can click around
 without installing anything.
 
@@ -74,9 +74,9 @@ without installing anything.
 - 📈 **Stats** — records by decade, format, genre, artist and label, what you added recently, and the
   value of your for-sale copies
 - 🔄 **Discogs sync** — connect your own Discogs account (Account → Discogs, with a personal access
-  token; Cratelog never asks for your password). "Sync now" merges your collection and wantlist both
+  token; Cratefolk never asks for your password). "Sync now" merges your collection and wantlist both
   ways: records missing on either side are added, and for copies on both, grades and notes follow
-  whichever side changed since the last sync (Cratelog wins if both did). New records, wishlist items,
+  whichever side changed since the last sync (Cratefolk wins if both did). New records, wishlist items,
   grades and notes are also sent to Discogs as you make them, which you can switch off. Deletions only
   sync if you turn on "Also sync deletions"; otherwise nothing is ever deleted on either side, and a
   record you delete here simply won't come back at the next sync
@@ -102,8 +102,8 @@ PC, a Raspberry Pi and most NAS boxes.
 1. **Get the compose file and the example settings:**
 
    ```sh
-   git clone https://github.com/blindpassasjer/cratelog.git
-   cd cratelog
+   git clone https://github.com/blindpassasjer/cratefolk.git
+   cd cratefolk
    cp .env.example .env
    ```
 
@@ -116,7 +116,7 @@ PC, a Raspberry Pi and most NAS boxes.
      [discogs.com/settings/developers](https://www.discogs.com/settings/developers). It works without
      one, but Discogs then allows fewer requests per minute and withholds search thumbnails, so
      setting it is recommended
-   - `COOKIE_SECURE=true` — only if you serve Cratelog over HTTPS
+   - `COOKIE_SECURE=true` — only if you serve Cratefolk over HTTPS
 
 3. **Start it:**
 
@@ -147,7 +147,7 @@ docker compose up -d
 
 Database migrations run automatically when the container starts. Releases are tagged `X.Y.Z`; the
 `latest` tag always points at the newest release, and you can pin a version in `docker-compose.yml`
-(for example `ghcr.io/blindpassasjer/cratelog:0.3.0`) if you prefer to upgrade deliberately.
+(for example `ghcr.io/blindpassasjer/cratefolk:0.3.0`) if you prefer to upgrade deliberately.
 
 ### Where your data lives
 
@@ -156,7 +156,7 @@ volume, so you can browse, back up or move it like any other files:
 
 | What | Where |
 |---|---|
-| Users, records, copies, crates, wishlist, share links (SQLite) | `./data/cratelog.db` |
+| Users, records, copies, crates, wishlist, share links (SQLite) | `./data/cratefolk.db` |
 | Cover images fetched from Discogs | `./data/covers/` |
 | Key that encrypts users' Discogs tokens | `./data/secret.key` |
 
@@ -174,15 +174,15 @@ docker compose start
 private. Without it the saved tokens can't be read and users would have to connect Discogs again.
 
 To restore, stop the container, put the backed-up folder back as `./data`, and start it again.
-Moving Cratelog to a new machine is the same thing: copy `data/` over, along with your `.env`.
+Moving Cratefolk to a new machine is the same thing: copy `data/` over, along with your `.env`.
 
 ### Behind a reverse proxy / HTTPS
 
-Cratelog speaks plain HTTP on port 6170. To serve it over HTTPS, put a reverse proxy with a
+Cratefolk speaks plain HTTP on port 6170. To serve it over HTTPS, put a reverse proxy with a
 certificate in front of it (Caddy, Traefik, Nginx Proxy Manager, or your NAS's built-in one all work)
 and set `COOKIE_SECURE=true` in `.env` so the session cookie is only sent over HTTPS.
 HTTPS is also required for barcode scanning: browsers only allow camera access on secure pages (or
-`localhost`), so the scan button is hidden when Cratelog is served over plain HTTP.
+`localhost`), so the scan button is hidden when Cratefolk is served over plain HTTP.
 
 ### Configuration
 
@@ -208,8 +208,8 @@ Handy if you want to run a modified version or a commit that isn't released yet.
 and Git.
 
 ```sh
-git clone https://github.com/blindpassasjer/cratelog.git
-cd cratelog
+git clone https://github.com/blindpassasjer/cratefolk.git
+cd cratefolk
 cp .env.example .env        # then set ADMIN_EMAIL and ADMIN_PASSWORD
 docker compose up -d --build
 ```
@@ -218,19 +218,19 @@ docker compose up -d --build
 pulling the published one. To build the image on its own:
 
 ```sh
-docker build -t cratelog .
+docker build -t cratefolk .
 ```
 
 To build for another architecture (for example a Raspberry Pi from a PC), use
-`docker buildx build --platform linux/arm64 -t cratelog .`.
+`docker buildx build --platform linux/arm64 -t cratefolk .`.
 
 ### Option B: Run it with Node.js (no Docker)
 
 You need [Node.js](https://nodejs.org/) 20 or newer and npm.
 
 ```sh
-git clone https://github.com/blindpassasjer/cratelog.git
-cd cratelog
+git clone https://github.com/blindpassasjer/cratefolk.git
+cd cratefolk
 npm ci                      # install dependencies
 npm run build               # builds the web app and the server
 
@@ -250,7 +250,7 @@ for your platform it compiles from source, which needs a C/C++ toolchain (`build
 
 ## Demo mode
 
-The [live demo](https://blindpassasjer.github.io/cratelog/) is a static build deployed to GitHub
+The [live demo](https://blindpassasjer.github.io/cratefolk/) is a static build deployed to GitHub
 Pages by [`.github/workflows/deploy-demo.yml`](.github/workflows/deploy-demo.yml) on every push to
 `main`. GitHub Pages can only serve static files, so the demo build replaces the real API client in
 [`apps/web/src/api.ts`](apps/web/src/api.ts) with a mock
@@ -265,7 +265,7 @@ Pages by [`.github/workflows/deploy-demo.yml`](.github/workflows/deploy-demo.yml
 Build it yourself with:
 
 ```sh
-npm run build:demo          # output in apps/web/dist, served from /cratelog/
+npm run build:demo          # output in apps/web/dist, served from /cratefolk/
 ```
 
 or run it as a dev server (served from `/`) with `npm run dev:demo`. If you fork the repo, set
@@ -294,7 +294,7 @@ codebase, one container, no external services beyond the Discogs API.
 
 ## Support
 
-Cratelog is free and open source. If it's useful to you, you can [buy me a coffee](https://buymeacoffee.com/blindpassasjer) or [Vipps me](https://qr.vipps.no/box/d4cd2440-08dd-4eb9-b6b1-88130f984233/pay-in).
+Cratefolk is free and open source. If it's useful to you, you can [buy me a coffee](https://buymeacoffee.com/blindpassasjer) or [Vipps me](https://qr.vipps.no/box/d4cd2440-08dd-4eb9-b6b1-88130f984233/pay-in).
 
 ## Contributing
 

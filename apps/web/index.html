@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script>
       try {
-        var t = localStorage.getItem('cratelog-theme') || localStorage.getItem('waxcrate-theme')
+        var t = localStorage.getItem('cratefolk-theme') || localStorage.getItem('cratelog-theme') || localStorage.getItem('waxcrate-theme')
         if (t !== 'light' && t !== 'dark') t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
         document.documentElement.dataset.theme = t
       } catch (e) {
@@ -18,9 +18,9 @@
     <meta name="theme-color" content="#0b0b0d" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="Cratelog" />
+    <meta name="apple-mobile-web-app-title" content="Cratefolk" />
     <meta name="robots" content="noindex" />
-    <title>Cratelog</title>
+    <title>Cratefolk</title>
   </head>
   <body>
     <div id="root"></div>

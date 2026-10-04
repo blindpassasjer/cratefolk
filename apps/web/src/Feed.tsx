@@ -23,12 +23,13 @@ const VERBS: Record<FeedEvent['type'], string> = {
   sold: 'sold',
 }
 
-const OPEN_KEY = 'cratelog-feed-open'
-const SEEN_KEY = 'cratelog-feed-seen'
+const OPEN_KEY = 'cratefolk-feed-open'
+const SEEN_KEY = 'cratefolk-feed-seen'
 
+// Keys from before the Cratelog -> Cratefolk rename are still read, so the feed keeps its open/seen state.
 const read = (key: string) => {
   try {
-    return localStorage.getItem(key)
+    return localStorage.getItem(key) ?? localStorage.getItem(key.replace('cratefolk-', 'cratelog-'))
   } catch {
     return null // storage unavailable: use the defaults
   }

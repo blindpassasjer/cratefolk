@@ -33,7 +33,7 @@ jobs:
       - name: Build demo (mock API, no server/database)
         run: npm run build:demo
 
-      # Pages has no SPA fallback; serving index.html as 404.html makes deep links (/cratelog/wishlist) work.
+      # Pages has no SPA fallback; serving index.html as 404.html makes deep links (/cratefolk/wishlist) work.
       - name: Add SPA fallback
         run: cp apps/web/dist/index.html apps/web/dist/404.html
 

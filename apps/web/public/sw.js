@@ -1,5 +1,5 @@
 // Minimal app-shell service worker. API calls are never cached: the collection must always be live.
-const CACHE = 'cratelog-shell-v1'
+const CACHE = 'cratefolk-shell-v1'
 const SCOPE = self.registration.scope
 
 self.addEventListener('install', (event) => {

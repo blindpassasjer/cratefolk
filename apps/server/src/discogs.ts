@@ -1,7 +1,7 @@
 import { config } from './config.js'
 
 const BASE = 'https://api.discogs.com'
-const USER_AGENT = 'Cratelog/0.0.1 +https://github.com/blindpassasjer/cratelog'
+const USER_AGENT = 'Cratefolk/0.0.1 +https://github.com/blindpassasjer/cratefolk'
 
 export class DiscogsError extends Error {
   constructor(
