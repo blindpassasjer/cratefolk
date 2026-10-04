@@ -198,6 +198,11 @@ const migrations: string[] = [
   -- Which shops to show "search" links for on wishlist and record pages (comma-separated ids; the list lives in the web app).
   ALTER TABLE users ADD COLUMN shops TEXT NOT NULL DEFAULT 'ebay,bandcamp';
   `,
+  `
+  -- A user's own Discogs account: the username is shown in settings, the personal access token is stored encrypted (see secrets.ts).
+  ALTER TABLE users ADD COLUMN discogs_username TEXT;
+  ALTER TABLE users ADD COLUMN discogs_token TEXT;
+  `,
 ]
 
 fs.mkdirSync(config.dataDir, { recursive: true })

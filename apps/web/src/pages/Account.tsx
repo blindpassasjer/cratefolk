@@ -54,6 +54,41 @@ export default function Account() {
   const [confirm, setConfirm] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
 
+  const [discogsToken, setDiscogsToken] = useState("");
+  const [connecting, setConnecting] = useState(false);
+
+  async function connectDiscogs(e: FormEvent) {
+    e.preventDefault();
+    setConnecting(true);
+    try {
+      const { discogsUsername } = await api<{ discogsUsername: string }>(
+        "/auth/discogs",
+        { method: "PUT", json: { token: discogsToken } },
+      );
+      await refresh();
+      setDiscogsToken("");
+      toast.success(`Connected to Discogs as ${discogsUsername}`);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Could not connect to Discogs",
+      );
+    } finally {
+      setConnecting(false);
+    }
+  }
+
+  async function disconnectDiscogs() {
+    try {
+      await api("/auth/discogs", { method: "DELETE" });
+      await refresh();
+      toast.success("Disconnected from Discogs");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Could not disconnect from Discogs",
+      );
+    }
+  }
+
   const emailChanged = !!user && email.trim().toLowerCase() !== user.email;
 
   async function saveProfile(e: FormEvent) {
@@ -247,6 +282,70 @@ export default function Account() {
                       {savingPassword ? "Changing…" : "Change password"}
                     </button>
                   </div>
+                </form>
+              )}
+            </Card>
+
+            <Card
+              title="Discogs"
+              hint="Connect your own Discogs account so Cratelog can work with your Discogs collection and wantlist. Cratelog never asks for your Discogs password."
+            >
+              {user?.discogsUsername ? (
+                <div className="flex items-center justify-between gap-4 text-sm">
+                  <p className="text-ink-300">
+                    Connected as{" "}
+                    <a
+                      href={`https://www.discogs.com/user/${encodeURIComponent(user.discogsUsername)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-medium text-ink-100 hover:text-wax"
+                    >
+                      {user.discogsUsername}
+                    </a>
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void disconnectDiscogs()}
+                    className="rounded-md border border-ink-700 px-3 py-1.5 text-sm hover:border-ink-500"
+                  >
+                    Disconnect
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={connectDiscogs} className="space-y-4">
+                  <ol className="list-decimal space-y-1 pl-5 text-sm text-ink-300">
+                    <li>
+                      Open{" "}
+                      <a
+                        href="https://www.discogs.com/settings/developers"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-ink-100 underline hover:text-wax"
+                      >
+                        Discogs → Settings → Developers
+                      </a>
+                    </li>
+                    <li>Click "Generate new token" and copy it</li>
+                    <li>Paste it below</li>
+                  </ol>
+                  <Field label="Personal access token">
+                    <input
+                      className={input}
+                      type="password"
+                      required
+                      autoComplete="off"
+                      value={discogsToken}
+                      onChange={(e) => setDiscogsToken(e.target.value)}
+                    />
+                  </Field>
+                  <p className="text-xs text-ink-500">
+                    The token is checked with Discogs, then stored encrypted on
+                    this server. You can disconnect here or revoke it on
+                    Discogs at any time.
+                  </p>
+                  <button className={button} disabled={connecting}>
+                    {connecting ? "Checking…" : "Connect"}
+                  </button>
                 </form>
               )}
             </Card>

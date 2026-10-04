@@ -74,6 +74,23 @@ async function getJson<T>(path: string, params: Record<string, string> = {}, pri
   }
 }
 
+/** Checks a user's personal access token and returns the Discogs username it belongs to. */
+export async function verifyToken(token: string): Promise<string> {
+  const res = await schedule(
+    () =>
+      fetch(`${BASE}/oauth/identity`, {
+        headers: { 'User-Agent': USER_AGENT, Authorization: `Discogs token=${token}` },
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      }).catch(() => {
+        throw new DiscogsError('Could not reach Discogs', 502)
+      }),
+    1,
+  )
+  if (res.status === 401) throw new DiscogsError('Discogs rejected the token', 401)
+  if (!res.ok) throw new DiscogsError(`Discogs returned ${res.status}`, 502)
+  return ((await res.json()) as { username: string }).username
+}
+
 /** Discogs disambiguates duplicate names with a numeric suffix, e.g. "Nirvana (2)". */
 const cleanName = (name: string) => name.replace(/\s\(\d+\)$/, '').trim()
 

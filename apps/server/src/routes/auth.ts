@@ -13,7 +13,8 @@ import {
 } from '../auth.js'
 import { config } from '../config.js'
 import { db } from '../db.js'
-import { CURRENCIES } from '../discogs.js'
+import { CURRENCIES, DiscogsError, verifyToken } from '../discogs.js'
+import { encrypt } from '../secrets.js'
 
 export const authRoutes = new Hono<AppEnv>()
 
@@ -154,7 +155,27 @@ authRoutes.patch('/me', requireUser, async (c) => {
 
   if (shops !== undefined) db.prepare('UPDATE users SET shops = ? WHERE id = ?').run([...new Set(shops)].join(','), user.id)
 
-  return c.json({ user: db.prepare('SELECT id, email, name, role, currency, share_collection AS shareCollection, share_wishlist AS shareWishlist, share_activity AS shareActivity, shops FROM users WHERE id = ?').get(user.id) })
+  return c.json({ user: db.prepare('SELECT id, email, name, role, currency, share_collection AS shareCollection, share_wishlist AS shareWishlist, share_activity AS shareActivity, shops, discogs_username AS discogsUsername FROM users WHERE id = ?').get(user.id) })
+})
+
+// Each user connects their own Discogs account with a personal access token (Discogs settings → Developers).
+// It is checked against Discogs first, then stored encrypted and never sent back to the browser.
+authRoutes.put('/discogs', requireUser, async (c) => {
+  const parsed = z.object({ token: z.string().trim().min(10).max(200) }).safeParse(await c.req.json().catch(() => null))
+  if (!parsed.success) return c.json({ error: 'Paste your Discogs personal access token' }, 400)
+  try {
+    const username = await verifyToken(parsed.data.token)
+    db.prepare('UPDATE users SET discogs_username = ?, discogs_token = ? WHERE id = ?').run(username, encrypt(parsed.data.token), c.get('user').id)
+    return c.json({ discogsUsername: username })
+  } catch (e) {
+    if (e instanceof DiscogsError && e.status === 401) return c.json({ error: 'Discogs did not accept that token' }, 400)
+    return c.json({ error: e instanceof DiscogsError ? e.message : 'Could not check the token with Discogs' }, 502)
+  }
+})
+
+authRoutes.delete('/discogs', requireUser, (c) => {
+  db.prepare('UPDATE users SET discogs_username = NULL, discogs_token = NULL WHERE id = ?').run(c.get('user').id)
+  return c.json({ ok: true })
 })
 
 const passwordSchema = z.object({

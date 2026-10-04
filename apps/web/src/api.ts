@@ -41,9 +41,11 @@ export interface User {
   shareActivity: number
   /** Comma-separated ids of the shops to show search links for (see SHOPS in Market.tsx). */
   shops: string
+  /** Username of the connected Discogs account, if any. The token itself never leaves the server. */
+  discogsUsername: string | null
 }
 
-export interface AdminUser extends Omit<User, 'shareCollection' | 'shareWishlist' | 'shareActivity' | 'shops'> {
+export interface AdminUser extends Omit<User, 'shareCollection' | 'shareWishlist' | 'shareActivity' | 'shops' | 'discogsUsername'> {
   disabled: number
   createdAt: string
 }

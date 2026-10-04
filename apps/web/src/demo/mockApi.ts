@@ -93,7 +93,7 @@ function addCopy(releaseId: number, notes: string | null = null, grades: Partial
 on('GET', '/auth/me', () => {
   const s = load()
   if (!s.signedIn) fail('Not signed in', 401)
-  return { user: { id: 1, email: s.me.email, name: s.me.name, role: 'admin', currency: s.me.currency, shareCollection: s.me.shareCollection ? 1 : 0, shareWishlist: s.me.shareWishlist ? 1 : 0, shareActivity: s.me.shareActivity === false ? 0 : 1, shops: s.me.shops ?? 'ebay,bandcamp' } }
+  return { user: { id: 1, email: s.me.email, name: s.me.name, role: 'admin', currency: s.me.currency, shareCollection: s.me.shareCollection ? 1 : 0, shareWishlist: s.me.shareWishlist ? 1 : 0, shareActivity: s.me.shareActivity === false ? 0 : 1, shops: s.me.shops ?? 'ebay,bandcamp', discogsUsername: s.me.discogsUsername ?? null } }
 })
 on('POST', '/auth/login', () => {
   load().signedIn = true // the demo accepts any credentials
@@ -115,6 +115,14 @@ on('PATCH', '/auth/me', (_m, _q, b) => {
   return { ok: true }
 })
 on('POST', '/auth/password', () => ({ ok: true }))
+on('PUT', '/auth/discogs', () => {
+  load().me.discogsUsername = 'demo-collector'
+  return { discogsUsername: 'demo-collector' }
+})
+on('DELETE', '/auth/discogs', () => {
+  load().me.discogsUsername = null
+  return { ok: true }
+})
 
 // ---- collection ----
 on('GET', '/collection', (_m, q) => {
