@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { requireUser, type AppEnv } from '../auth.js'
 import { db } from '../db.js'
 import { DiscogsError } from '../discogs.js'
+import { pushCopyEdit, pushNewCopy, pushUnwishlisted } from '../discogsSync.js'
 import { logEvent } from '../events.js'
 import { triviaFor } from '../trivia.js'
 import { TRACKS_SQL, canAccessRelease, coverFile, createManualRelease, deleteManualRelease, ensureRelease, isCreator, updateManualRelease } from '../releases.js'
@@ -67,8 +68,9 @@ collectionRoutes.post('/', async (c) => {
   }
   const userId = c.get('user').id
   // Owning a record takes it off the wishlist.
+  let wasWished = false
   const info = db.transaction(() => {
-    db.prepare('DELETE FROM wishlist WHERE user_id = ? AND release_id = ?').run(userId, releaseId)
+    wasWished = db.prepare('DELETE FROM wishlist WHERE user_id = ? AND release_id = ?').run(userId, releaseId).changes > 0
     return db
       .prepare(
         'INSERT INTO copies (user_id, release_id, media_condition, sleeve_condition, notes) VALUES (?, ?, ?, ?, ?)',
@@ -76,6 +78,8 @@ collectionRoutes.post('/', async (c) => {
       .run(userId, releaseId, mediaCondition ?? null, sleeveCondition ?? null, notes ?? null)
   })()
   logEvent(userId, 'added', releaseId)
+  pushNewCopy(userId, Number(info.lastInsertRowid))
+  if (wasWished) pushUnwishlisted(userId, releaseId)
   const copy = withIds(db.prepare(`${COPY_SELECT} WHERE c.id = ?`).get(info.lastInsertRowid))
   return c.json({ copy }, 201)
 })
@@ -110,6 +114,7 @@ collectionRoutes.patch('/:id', async (c) => {
   if (mediaCondition !== undefined) db.prepare('UPDATE copies SET media_condition = ? WHERE id = ?').run(mediaCondition, id)
   if (sleeveCondition !== undefined) db.prepare('UPDATE copies SET sleeve_condition = ? WHERE id = ?').run(sleeveCondition, id)
   if (notes !== undefined) db.prepare('UPDATE copies SET notes = ? WHERE id = ?').run(notes, id)
+  if (mediaCondition !== undefined || sleeveCondition !== undefined || notes !== undefined) pushCopyEdit(id, { mediaCondition, sleeveCondition, notes })
   if (forSale !== undefined) {
     db.prepare('UPDATE copies SET for_sale = ? WHERE id = ?').run(forSale ? 1 : 0, id)
     if (forSale && !copy.forSale) logEvent(me, 'listed', copy.releaseId)

@@ -1,7 +1,7 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { api, CURRENCIES } from "../api";
 import { useAuth } from "../auth";
-import { useToast } from "../notify";
+import { useDialog, useToast } from "../notify";
 import { SHOPS, parseShops } from "../Market";
 import AdminUsers from "./AdminUsers";
 
@@ -27,6 +27,122 @@ function Card({
       </div>
       {children}
     </section>
+  );
+}
+
+interface SyncStatus {
+  running: boolean;
+  phase: string;
+  done: number;
+  total: number;
+  imported: number;
+  linked: number;
+  pushed: number;
+  skipped: number;
+  error?: string;
+}
+
+/** Shown once Discogs is connected: sync now, and whether changes made here are sent to Discogs. */
+function DiscogsSync() {
+  const toast = useToast();
+  const { confirm } = useDialog();
+  const [push, setPush] = useState(true);
+  const [sync, setSync] = useState<SyncStatus | null>(null);
+
+  const load = useCallback(async () => {
+    const r = await api<{ push: boolean; sync: SyncStatus | null }>("/auth/discogs");
+    setPush(r.push);
+    setSync(r.sync);
+    return r.sync;
+  }, []);
+
+  useEffect(() => {
+    void load().catch(() => {});
+  }, [load]);
+
+  // Poll while a sync runs.
+  useEffect(() => {
+    if (!sync?.running) return;
+    const t = setInterval(() => void load().catch(() => {}), 2000);
+    return () => clearInterval(t);
+  }, [sync?.running, load]);
+
+  async function start() {
+    const ok = await confirm({
+      title: "Sync with Discogs?",
+      message: push
+        ? "Cratelog will add what is on your Discogs collection and wantlist but not here, then add what is here but not on Discogs. Nothing is ever deleted on either side. Large collections take a while; you can keep using Cratelog."
+        : "Cratelog will add what is on your Discogs collection and wantlist but not here. Nothing is sent to Discogs and nothing is deleted. Large collections take a while; you can keep using Cratelog.",
+      confirmLabel: "Start sync",
+    });
+    if (!ok) return;
+    try {
+      await api("/auth/discogs/sync", { method: "POST" });
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not start the sync");
+    }
+  }
+
+  async function savePush(on: boolean) {
+    setPush(on);
+    try {
+      await api("/auth/discogs", { method: "PATCH", json: { push: on } });
+    } catch (err) {
+      setPush(!on);
+      toast.error(err instanceof Error ? err.message : "Could not save this setting");
+    }
+  }
+
+  const summary = (s: SyncStatus) =>
+    [
+      s.imported && `${s.imported} added from Discogs`,
+      s.linked && `${s.linked} matched`,
+      s.pushed && `${s.pushed} sent to Discogs`,
+      s.skipped && `${s.skipped} skipped`,
+    ]
+      .filter(Boolean)
+      .join(", ") || "Everything was already in sync";
+
+  return (
+    <div className="space-y-4 border-t border-ink-800 pt-4">
+      <label className="flex items-start gap-2 text-sm text-ink-300">
+        <input
+          type="checkbox"
+          className="mt-0.5 accent-wax"
+          checked={push}
+          onChange={(e) => void savePush(e.target.checked)}
+        />
+        <span>
+          Send changes to Discogs
+          <span className="block text-xs text-ink-500">
+            New records, wishlist items, grades and notes are added to your Discogs account as you make them. Removing a record here never removes it there.
+          </span>
+        </span>
+      </label>
+
+      <div className="space-y-2">
+        <button
+          type="button"
+          className={button}
+          disabled={sync?.running}
+          onClick={() => void start()}
+        >
+          {sync?.running ? "Syncing…" : "Sync now"}
+        </button>
+        {sync?.running && (
+          <p className="text-xs text-ink-300">
+            {sync.phase}
+            {sync.total > 0 && ` (${sync.done} of ${sync.total})`}
+          </p>
+        )}
+        {sync && !sync.running && (
+          <p className={`text-xs ${sync.error ? "text-danger" : "text-ink-300"}`}>
+            {sync.error ? `Sync stopped: ${sync.error}` : `Last sync: ${summary(sync)}.`}
+          </p>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -291,6 +407,7 @@ export default function Account() {
               hint="Connect your own Discogs account so Cratelog can work with your Discogs collection and wantlist. Cratelog never asks for your Discogs password."
             >
               {user?.discogsUsername ? (
+                <>
                 <div className="flex items-center justify-between gap-4 text-sm">
                   <p className="text-ink-300">
                     Connected as{" "}
@@ -311,6 +428,8 @@ export default function Account() {
                     Disconnect
                   </button>
                 </div>
+                <DiscogsSync />
+                </>
               ) : (
                 <form onSubmit={connectDiscogs} className="space-y-4">
                   <ol className="list-decimal space-y-1 pl-5 text-sm text-ink-300">

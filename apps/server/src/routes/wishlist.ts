@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { requireUser, type AppEnv } from '../auth.js'
 import { db } from '../db.js'
+import { pushNewCopy, pushUnwishlisted, pushWishlisted } from '../discogsSync.js'
 import { logEvent } from '../events.js'
 import { DiscogsError, fetchMarketStats, marketCurrency } from '../discogs.js'
 import { ensureRelease, TRACKS_SQL } from '../releases.js'
@@ -44,7 +45,10 @@ wishlistRoutes.post('/', async (c) => {
   const info = db
     .prepare('INSERT OR IGNORE INTO wishlist (user_id, release_id, notes) VALUES (?, ?, ?)')
     .run(userId, releaseId, notes ?? null)
-  if (info.changes) logEvent(userId, 'wishlisted', releaseId)
+  if (info.changes) {
+    logEvent(userId, 'wishlisted', releaseId)
+    pushWishlisted(userId, releaseId, notes)
+  }
   const item = db.prepare(`${ITEM_SELECT} WHERE w.user_id = ? AND w.release_id = ?`).get(userId, releaseId)
   return c.json({ item }, info.changes ? 201 : 200)
 })
@@ -93,6 +97,8 @@ wishlistRoutes.post('/:id/acquire', async (c) => {
   if (copyId === null) return c.json({ error: 'Wishlist item not found' }, 404)
   const acquired = db.prepare('SELECT release_id AS releaseId FROM copies WHERE id = ?').get(copyId) as { releaseId: number }
   logEvent(userId, 'added', acquired.releaseId)
+  pushNewCopy(userId, copyId)
+  pushUnwishlisted(userId, acquired.releaseId)
   return c.json({ copyId }, 201)
 })
 

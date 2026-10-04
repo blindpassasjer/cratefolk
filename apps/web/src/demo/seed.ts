@@ -128,7 +128,7 @@ export interface StoredCopy {
 export interface DemoState {
   nextId: number
   signedIn: boolean
-  me: { name: string; email: string; currency: string; shareCollection?: boolean; shareWishlist?: boolean; shareActivity?: boolean; shops?: string; discogsUsername?: string | null }
+  me: { name: string; email: string; currency: string; shareCollection?: boolean; shareWishlist?: boolean; shareActivity?: boolean; shops?: string; discogsUsername?: string | null; discogsSync?: unknown }
   copies: StoredCopy[]
   wishlist: Array<{ id: number; releaseId: number; notes: string | null; addedAt: string }>
   groups: Array<{ id: number; name: string }>

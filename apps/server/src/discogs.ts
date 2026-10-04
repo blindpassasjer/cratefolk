@@ -15,8 +15,8 @@ export class DiscogsError extends Error {
 // Discogs allows 60 requests/min with a token and 25 without. Requests run one at a time,
 // spaced out so we stay under that, and 429s are retried after the server's Retry-After.
 // Interactive requests (priority 1) jump ahead of background ones (priority 0).
-const MIN_GAP_MS = config.discogsToken ? 1100 : 2500
-const queue: Array<{ priority: number; run: () => Promise<void> }> = []
+const gapFor = (token: string | null | undefined) => (token || config.discogsToken ? 1100 : 2500)
+const queue: Array<{ priority: number; gap: number; run: () => Promise<void> }> = []
 let pumping = false
 let lastStart = 0
 
@@ -27,7 +27,7 @@ async function pump(): Promise<void> {
     let next = 0
     for (let i = 1; i < queue.length; i++) if (queue[i]!.priority > queue[next]!.priority) next = i
     const job = queue.splice(next, 1)[0]!
-    const wait = lastStart + MIN_GAP_MS - Date.now()
+    const wait = lastStart + job.gap - Date.now()
     if (wait > 0) await new Promise((r) => setTimeout(r, wait))
     lastStart = Date.now()
     await job.run()
@@ -35,32 +35,47 @@ async function pump(): Promise<void> {
   pumping = false
 }
 
-function schedule<T>(task: () => Promise<T>, priority: number): Promise<T> {
+function schedule<T>(task: () => Promise<T>, priority: number, gap = gapFor(null)): Promise<T> {
   return new Promise<T>((resolve, reject) => {
-    queue.push({ priority, run: () => task().then(resolve, reject) })
+    queue.push({ priority, gap, run: () => task().then(resolve, reject) })
     void pump()
   })
 }
 
-const headers = (): Record<string, string> => ({
-  'User-Agent': USER_AGENT,
-  ...(config.discogsToken ? { Authorization: `Discogs token=${config.discogsToken}` } : {}),
-})
+/** Requests use the server's DISCOGS_TOKEN unless a user's own token is given. */
+const headers = (token?: string | null): Record<string, string> => {
+  const t = token || config.discogsToken
+  return { 'User-Agent': USER_AGENT, ...(t ? { Authorization: `Discogs token=${t}` } : {}) }
+}
 
 const TIMEOUT_MS = 20_000
 
 /** A hung or unreachable Discogs must not block the queue, and surfaces as a 502 rather than a crash. */
-const fetchDiscogs = (url: URL | string) =>
-  fetch(url, { headers: headers(), signal: AbortSignal.timeout(TIMEOUT_MS) }).catch(() => {
+const fetchDiscogs = (url: URL | string, token?: string | null, init: RequestInit = {}) =>
+  fetch(url, {
+    ...init,
+    headers: { ...headers(token), ...(init.body ? { 'Content-Type': 'application/json' } : {}) },
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  }).catch(() => {
     throw new DiscogsError('Could not reach Discogs', 502)
   })
 
-async function getJson<T>(path: string, params: Record<string, string> = {}, priority = 1): Promise<T> {
+export interface RequestOptions {
+  params?: Record<string, string>
+  body?: unknown
+  /** A user's own token; defaults to the server's. */
+  token?: string | null
+  priority?: number
+}
+
+/** Calls the Discogs API. Returns undefined for empty (204) responses. */
+export async function discogsRequest<T = unknown>(method: string, path: string, opts: RequestOptions = {}): Promise<T> {
   const url = new URL(BASE + path)
-  for (const [k, v] of Object.entries(params)) if (v) url.searchParams.set(k, v)
+  for (const [k, v] of Object.entries(opts.params ?? {})) if (v) url.searchParams.set(k, v)
+  const init: RequestInit = { method, ...(opts.body !== undefined ? { body: JSON.stringify(opts.body) } : {}) }
 
   for (let attempt = 0; ; attempt++) {
-    const res = await schedule(() => fetchDiscogs(url), priority)
+    const res = await schedule(() => fetchDiscogs(url, opts.token, init), opts.priority ?? 1, gapFor(opts.token))
     if (res.status === 429 && attempt < 3) {
       const retryAfter = Number(res.headers.get('retry-after')) || 5
       await new Promise((r) => setTimeout(r, retryAfter * 1000))
@@ -70,9 +85,13 @@ async function getJson<T>(path: string, params: Record<string, string> = {}, pri
     if (res.status === 404) throw new DiscogsError('Not found on Discogs', 404)
     if (res.status === 401) throw new DiscogsError('Discogs rejected the token', 502)
     if (!res.ok) throw new DiscogsError(`Discogs returned ${res.status}`, 502)
-    return (await res.json()) as T
+    const text = await res.text()
+    return (text ? JSON.parse(text) : undefined) as T
   }
 }
+
+const getJson = <T>(path: string, params: Record<string, string> = {}, priority = 1) =>
+  discogsRequest<T>('GET', path, { params, priority })
 
 /** Checks a user's personal access token and returns the Discogs username it belongs to. */
 export async function verifyToken(token: string): Promise<string> {
@@ -85,6 +104,7 @@ export async function verifyToken(token: string): Promise<string> {
         throw new DiscogsError('Could not reach Discogs', 502)
       }),
     1,
+    gapFor(token),
   )
   if (res.status === 401) throw new DiscogsError('Discogs rejected the token', 401)
   if (!res.ok) throw new DiscogsError(`Discogs returned ${res.status}`, 502)

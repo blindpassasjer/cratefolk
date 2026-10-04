@@ -14,6 +14,7 @@ import {
 import { config } from '../config.js'
 import { db } from '../db.js'
 import { CURRENCIES, DiscogsError, verifyToken } from '../discogs.js'
+import { accountFor, startSync, syncStatus } from '../discogsSync.js'
 import { encrypt } from '../secrets.js'
 
 export const authRoutes = new Hono<AppEnv>()
@@ -173,8 +174,32 @@ authRoutes.put('/discogs', requireUser, async (c) => {
   }
 })
 
+authRoutes.get('/discogs', requireUser, (c) => {
+  const acct = accountFor(c.get('user').id)
+  return c.json({ connected: !!acct, push: acct?.push ?? true, sync: syncStatus(c.get('user').id) })
+})
+
+authRoutes.patch('/discogs', requireUser, async (c) => {
+  const parsed = z.object({ push: z.boolean() }).safeParse(await c.req.json().catch(() => null))
+  if (!parsed.success) return c.json({ error: 'Invalid request' }, 400)
+  db.prepare('UPDATE users SET discogs_push = ? WHERE id = ?').run(parsed.data.push ? 1 : 0, c.get('user').id)
+  return c.json({ push: parsed.data.push })
+})
+
+// Pulls in what is on Discogs but not here, then (if enabled) sends what is here but not there. Runs in the background.
+authRoutes.post('/discogs/sync', requireUser, (c) => {
+  const userId = c.get('user').id
+  if (!accountFor(userId)) return c.json({ error: 'Connect your Discogs account first' }, 400)
+  if (!startSync(userId)) return c.json({ error: 'A sync is already running' }, 409)
+  return c.json({ sync: syncStatus(userId) }, 202)
+})
+
 authRoutes.delete('/discogs', requireUser, (c) => {
-  db.prepare('UPDATE users SET discogs_username = NULL, discogs_token = NULL WHERE id = ?').run(c.get('user').id)
+  const userId = c.get('user').id
+  db.transaction(() => {
+    db.prepare('UPDATE users SET discogs_username = NULL, discogs_token = NULL WHERE id = ?').run(userId)
+    db.prepare('UPDATE copies SET discogs_instance_id = NULL, discogs_folder_id = NULL WHERE user_id = ?').run(userId) // links belong to that account
+  })()
   return c.json({ ok: true })
 })
 
