@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { requireUser, type AppEnv } from '../auth.js'
 import { db } from '../db.js'
 import { DiscogsError } from '../discogs.js'
-import { pushCopyEdit, pushNewCopy, pushUnwishlisted } from '../discogsSync.js'
+import { pushCopyEdit, pushNewCopy, pushUnwishlisted, rememberCopyRemoval, rememberWishRemoval } from '../discogsSync.js'
 import { logEvent } from '../events.js'
 import { triviaFor } from '../trivia.js'
 import { TRACKS_SQL, canAccessRelease, coverFile, createManualRelease, deleteManualRelease, ensureRelease, isCreator, updateManualRelease } from '../releases.js'
@@ -70,6 +70,7 @@ collectionRoutes.post('/', async (c) => {
   // Owning a record takes it off the wishlist.
   let wasWished = false
   const info = db.transaction(() => {
+    rememberWishRemoval(userId, releaseId)
     wasWished = db.prepare('DELETE FROM wishlist WHERE user_id = ? AND release_id = ?').run(userId, releaseId).changes > 0
     return db
       .prepare(
@@ -137,6 +138,7 @@ collectionRoutes.post('/:id/sold', (c) => {
   const copy = db.prepare('SELECT release_id AS releaseId FROM copies WHERE id = ? AND user_id = ?').get(id, me) as { releaseId: number } | undefined
   if (!copy) return c.json({ error: 'Copy not found' }, 404)
   db.transaction(() => {
+    rememberCopyRemoval(id, me)
     db.prepare('DELETE FROM copies WHERE id = ?').run(id)
     logEvent(me, 'sold', copy.releaseId)
   })()
@@ -147,6 +149,7 @@ collectionRoutes.post('/:id/sold', (c) => {
 collectionRoutes.delete('/:id', (c) => {
   const id = Number(c.req.param('id'))
   const me = c.get('user').id
+  rememberCopyRemoval(id, me)
   const res = db.prepare('DELETE FROM copies WHERE id = ? AND user_id = ?').run(id, me)
   if (res.changes) return c.json({ ok: true })
   const left = db.prepare('UPDATE copies SET co_owner_id = NULL WHERE id = ? AND co_owner_id = ?').run(id, me)

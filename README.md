@@ -73,9 +73,17 @@ without installing anything.
   your for-sale list. Notes stay private, and you can revoke a link at any time
 - 📈 **Stats** — records by decade, format, genre, artist and label, what you added recently, and the
   value of your for-sale copies
+- 🔄 **Discogs sync** — connect your own Discogs account (Account → Discogs, with a personal access
+  token; Cratelog never asks for your password). "Sync now" merges your collection and wantlist both
+  ways: records missing on either side are added, and for copies on both, grades and notes follow
+  whichever side changed since the last sync (Cratelog wins if both did). New records, wishlist items,
+  grades and notes are also sent to Discogs as you make them, which you can switch off. Deletions only
+  sync if you turn on "Also sync deletions"; otherwise nothing is ever deleted on either side, and a
+  record you delete here simply won't come back at the next sync
 - 📊 **Excel export** — download your collection, a crate, the for-sale list or the wishlist as `.xlsx`
-- 👥 **Multiple users** — the admin creates accounts (and hands out one-time password reset links), or
-  opens registration so people can sign up themselves; everyone gets their own private collection
+- 👥 **Multiple users** — the admin creates accounts (and can set a password or hand out a one-time
+  reset link), or opens registration so people can sign up themselves; everyone gets their own
+  private collection
 - 🤝 **Browse and share with friends** — opt in to let other users browse your collection or
   wishlist (read-only, never your grades, notes or prices), and mark copies you co-own with someone,
   which then show in both your collections
@@ -150,6 +158,7 @@ volume, so you can browse, back up or move it like any other files:
 |---|---|
 | Users, records, copies, crates, wishlist, share links (SQLite) | `./data/cratelog.db` |
 | Cover images fetched from Discogs | `./data/covers/` |
+| Key that encrypts users' Discogs tokens | `./data/secret.key` |
 
 ### Backups
 
@@ -160,6 +169,9 @@ docker compose stop
 cp -a data "data-backup-$(date +%F)"
 docker compose start
 ```
+
+`data/secret.key` is what protects the Discogs tokens stored in the database, so keep your backups
+private. Without it the saved tokens can't be read and users would have to connect Discogs again.
 
 To restore, stop the container, put the backed-up folder back as `./data`, and start it again.
 Moving Cratelog to a new machine is the same thing: copy `data/` over, along with your `.env`.
@@ -178,7 +190,8 @@ HTTPS is also required for barcode scanning: browsers only allow camera access o
 |---|---|---|
 | `ADMIN_EMAIL` | — (required) | Email of the admin account, created on every start |
 | `ADMIN_PASSWORD` | — (required) | Password of the admin account, re-synced on every start |
-| `DISCOGS_TOKEN` | empty | Discogs personal access token; raises the rate limit and enables search thumbnails |
+| `DISCOGS_TOKEN` | empty | Discogs personal access token for searching; raises the rate limit and enables search thumbnails. Syncing uses each user's own token, set under Account → Discogs |
+| `SECRET_KEY` | generated | Optional passphrase for encrypting users' Discogs tokens. By default a random key is created in `data/secret.key` |
 | `COOKIE_SECURE` | `false` | Set to `true` when served over HTTPS |
 | `TRUST_PROXY` | `false` | Set to `true` only behind a reverse proxy that sets `X-Forwarded-For`; used for login rate limiting |
 | `PORT` | `6170` | Port the server listens on. Preset in the Docker image, only set it for local runs |

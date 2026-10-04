@@ -38,6 +38,8 @@ interface SyncStatus {
   imported: number;
   linked: number;
   pushed: number;
+  updated: number;
+  removed: number;
   skipped: number;
   error?: string;
 }
@@ -47,11 +49,13 @@ function DiscogsSync() {
   const toast = useToast();
   const { confirm } = useDialog();
   const [push, setPush] = useState(true);
+  const [deletes, setDeletes] = useState(false);
   const [sync, setSync] = useState<SyncStatus | null>(null);
 
   const load = useCallback(async () => {
-    const r = await api<{ push: boolean; sync: SyncStatus | null }>("/auth/discogs");
+    const r = await api<{ push: boolean; syncDeletes: boolean; sync: SyncStatus | null }>("/auth/discogs");
     setPush(r.push);
+    setDeletes(r.syncDeletes);
     setSync(r.sync);
     return r.sync;
   }, []);
@@ -70,9 +74,14 @@ function DiscogsSync() {
   async function start() {
     const ok = await confirm({
       title: "Sync with Discogs?",
-      message: push
-        ? "Cratelog will add what is on your Discogs collection and wantlist but not here, then add what is here but not on Discogs. Nothing is ever deleted on either side. Large collections take a while; you can keep using Cratelog."
-        : "Cratelog will add what is on your Discogs collection and wantlist but not here. Nothing is sent to Discogs and nothing is deleted. Large collections take a while; you can keep using Cratelog.",
+      message:
+        (push
+          ? "Cratelog will add what is on your Discogs collection and wantlist but not here, add what is here but not on Discogs, and bring grades and notes in line (whichever side changed since the last sync wins; Cratelog wins if both did). "
+          : "Cratelog will add what is on your Discogs collection and wantlist but not here, and bring in grades and notes you changed on Discogs. Nothing is sent to Discogs. ") +
+        (deletes
+          ? "Deletions are on: records you removed on one side are removed on the other too. "
+          : "Nothing is deleted on either side. ") +
+        "Large collections take a while; you can keep using Cratelog.",
       confirmLabel: "Start sync",
     });
     if (!ok) return;
@@ -94,11 +103,23 @@ function DiscogsSync() {
     }
   }
 
+  async function saveDeletes(on: boolean) {
+    setDeletes(on);
+    try {
+      await api("/auth/discogs", { method: "PATCH", json: { syncDeletes: on } });
+    } catch (err) {
+      setDeletes(!on);
+      toast.error(err instanceof Error ? err.message : "Could not save this setting");
+    }
+  }
+
   const summary = (s: SyncStatus) =>
     [
       s.imported && `${s.imported} added from Discogs`,
       s.linked && `${s.linked} matched`,
       s.pushed && `${s.pushed} sent to Discogs`,
+      s.updated && `${s.updated} updated`,
+      s.removed && `${s.removed} removed`,
       s.skipped && `${s.skipped} skipped`,
     ]
       .filter(Boolean)
@@ -116,7 +137,22 @@ function DiscogsSync() {
         <span>
           Send changes to Discogs
           <span className="block text-xs text-ink-500">
-            New records, wishlist items, grades and notes are added to your Discogs account as you make them. Removing a record here never removes it there.
+            New records, wishlist items, grades and notes are sent to your Discogs account as you make them. Without this, Sync only brings changes in.
+          </span>
+        </span>
+      </label>
+
+      <label className="flex items-start gap-2 text-sm text-ink-300">
+        <input
+          type="checkbox"
+          className="mt-0.5 accent-wax"
+          checked={deletes}
+          onChange={(e) => void saveDeletes(e.target.checked)}
+        />
+        <span>
+          Also sync deletions
+          <span className="block text-xs text-ink-500">
+            A record you remove here is removed from Discogs at the next sync, and one you remove on Discogs is removed here. Off by default. Either way, a record you delete won't come back at the next sync.
           </span>
         </span>
       </label>

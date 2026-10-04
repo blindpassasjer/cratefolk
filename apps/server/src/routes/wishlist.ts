@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { requireUser, type AppEnv } from '../auth.js'
 import { db } from '../db.js'
-import { pushNewCopy, pushUnwishlisted, pushWishlisted } from '../discogsSync.js'
+import { forgetWishRemoval, pushNewCopy, pushUnwishlisted, pushWishlisted, rememberWishRemoval } from '../discogsSync.js'
 import { logEvent } from '../events.js'
 import { DiscogsError, fetchMarketStats, marketCurrency } from '../discogs.js'
 import { ensureRelease, TRACKS_SQL } from '../releases.js'
@@ -45,6 +45,7 @@ wishlistRoutes.post('/', async (c) => {
   const info = db
     .prepare('INSERT OR IGNORE INTO wishlist (user_id, release_id, notes) VALUES (?, ?, ?)')
     .run(userId, releaseId, notes ?? null)
+  forgetWishRemoval(userId, releaseId)
   if (info.changes) {
     logEvent(userId, 'wishlisted', releaseId)
     pushWishlisted(userId, releaseId, notes)
@@ -65,9 +66,11 @@ wishlistRoutes.patch('/:id', async (c) => {
 })
 
 wishlistRoutes.delete('/:id', (c) => {
-  const res = db
-    .prepare('DELETE FROM wishlist WHERE id = ? AND user_id = ?')
-    .run(Number(c.req.param('id')), c.get('user').id)
+  const id = Number(c.req.param('id'))
+  const userId = c.get('user').id
+  const item = db.prepare('SELECT release_id AS releaseId FROM wishlist WHERE id = ? AND user_id = ?').get(id, userId) as { releaseId: number } | undefined
+  if (item) rememberWishRemoval(userId, item.releaseId)
+  const res = db.prepare('DELETE FROM wishlist WHERE id = ? AND user_id = ?').run(id, userId)
   return res.changes ? c.json({ ok: true }) : c.json({ error: 'Wishlist item not found' }, 404)
 })
 
@@ -90,6 +93,7 @@ wishlistRoutes.post('/:id/acquire', async (c) => {
         'INSERT INTO copies (user_id, release_id, media_condition, sleeve_condition, notes) VALUES (?, ?, ?, ?, ?)',
       )
       .run(userId, item.releaseId, parsed.data.mediaCondition ?? null, parsed.data.sleeveCondition ?? null, item.notes)
+    rememberWishRemoval(userId, item.releaseId)
     db.prepare('DELETE FROM wishlist WHERE id = ?').run(id)
     return Number(info.lastInsertRowid)
   })()

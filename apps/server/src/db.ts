@@ -211,6 +211,26 @@ const migrations: string[] = [
   ALTER TABLE copies ADD COLUMN discogs_folder_id INTEGER;
   CREATE UNIQUE INDEX copies_discogs_instance ON copies(user_id, discogs_instance_id) WHERE discogs_instance_id IS NOT NULL;
   `,
+  `
+  -- Three-way Discogs sync. A copy remembers what Discogs held for its grades and notes at the last sync (so we can tell
+  -- which side changed), a wishlist item whether it was on the Discogs wantlist, and removals made here are remembered until
+  -- they have been carried out on Discogs. Deletions only sync when the user opts in.
+  ALTER TABLE copies ADD COLUMN sync_media TEXT;
+  ALTER TABLE copies ADD COLUMN sync_sleeve TEXT;
+  ALTER TABLE copies ADD COLUMN sync_notes TEXT;
+  ALTER TABLE copies ADD COLUMN synced_at INTEGER;
+  ALTER TABLE wishlist ADD COLUMN discogs_synced INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE users ADD COLUMN discogs_sync_deletes INTEGER NOT NULL DEFAULT 0;
+  CREATE TABLE discogs_removals (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    kind        TEXT NOT NULL CHECK (kind IN ('copy', 'want')),
+    release_id  INTEGER NOT NULL,
+    instance_id INTEGER NOT NULL DEFAULT 0,
+    folder_id   INTEGER,
+    UNIQUE (user_id, kind, instance_id, release_id)
+  );
+  `,
 ]
 
 fs.mkdirSync(config.dataDir, { recursive: true })

@@ -115,10 +115,10 @@ on('PATCH', '/auth/me', (_m, _q, b) => {
   return { ok: true }
 })
 on('POST', '/auth/password', () => ({ ok: true }))
-on('GET', '/auth/discogs', () => ({ connected: true, push: true, sync: load().me.discogsSync ?? null }))
-on('PATCH', '/auth/discogs', (_m, _q, b) => ({ push: !!b.push }))
+on('GET', '/auth/discogs', () => ({ connected: true, push: true, syncDeletes: false, sync: load().me.discogsSync ?? null }))
+on('PATCH', '/auth/discogs', (_m, _q, b) => b)
 on('POST', '/auth/discogs/sync', () => {
-  load().me.discogsSync = { running: false, phase: 'Done', done: 0, total: 0, imported: 0, linked: 0, pushed: 0, skipped: 0 }
+  load().me.discogsSync = { running: false, phase: 'Done', done: 0, total: 0, imported: 0, linked: 0, pushed: 0, updated: 0, removed: 0, skipped: 0 }
   return { sync: load().me.discogsSync }
 })
 on('PUT', '/auth/discogs', () => {
