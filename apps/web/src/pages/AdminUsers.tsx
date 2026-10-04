@@ -107,7 +107,7 @@ export default function AdminUsers() {
               <div className="flex items-center gap-2 text-sm">
                 <span className={`truncate ${u.disabled ? 'text-ink-500' : ''}`}>{u.name}</span>
                 {u.role === 'admin' && <span className="rounded bg-ink-800 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-ink-300">Admin</span>}
-                {u.disabled && <span className="rounded bg-ink-800 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-ink-500">Disabled</span>}
+                {!!u.disabled && <span className="rounded bg-ink-800 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-ink-500">Disabled</span>}
               </div>
               <div className="truncate text-xs text-ink-500">{u.email}</div>
             </div>
