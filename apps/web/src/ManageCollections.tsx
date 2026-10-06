@@ -66,7 +66,7 @@ export default function ManageCollections({
   const iconBtn = 'rounded-md p-2 text-ink-500 transition-colors hover:text-ink-100'
 
   return (
-    <div className="fixed inset-0 z-20 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm sm:pt-[10vh]" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm sm:pt-[10vh]" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="w-full max-w-md rounded-xl border border-ink-700 bg-ink-900 shadow-2xl">
         <div className="flex items-center justify-between border-b border-ink-800 px-4 py-3">
           <h2 className="font-semibold">Manage crates</h2>
