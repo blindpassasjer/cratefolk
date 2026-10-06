@@ -1,0 +1,427 @@
+{
+  "/workspaces/cratefolk/package.json": {
+    "mtime": 1791133011.8294306,
+    "ast_hash": "d89989318fd1814552dd6e50d19ca342",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/server/package.json": {
+    "mtime": 1791133011.8399813,
+    "ast_hash": "ea6f5d950b2e261b48df95704fab7fe0",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/server/tsconfig.json": {
+    "mtime": 1790953073.3021326,
+    "ast_hash": "650bebf1811a516340933f6b0707a347",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/server/src/auth.ts": {
+    "mtime": 1791133000.3102973,
+    "ast_hash": "6367606fa68f0cf98da990b16cb01dcd",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/server/src/trivia.ts": {
+    "mtime": 1791132985.7020857,
+    "ast_hash": "6e9fac0eed2b2a09ec30aedd1cf8ad0d",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/server/src/releases.ts": {
+    "mtime": 1791274173.5971274,
+    "ast_hash": "7cfe94e88ebf25a252c3114aa81c247e",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/server/src/index.ts": {
+    "mtime": 1791132985.7037897,
+    "ast_hash": "a9b0627f9c00d7f471836ed99b16ecae",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/server/src/db.ts": {
+    "mtime": 1791133000.3122928,
+    "ast_hash": "0d2ce44af082e075272828f14f3d62a4",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/server/src/discogsSync.ts": {
+    "mtime": 1791132985.7053485,
+    "ast_hash": "7c8d587818516ea2b29f7de323bf8d86",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/server/src/events.ts": {
+    "mtime": 1791013176.0240946,
+    "ast_hash": "9cbcc1c11feb13ae63977703fd03cfa0",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/server/src/config.ts": {
+    "mtime": 1790963870.8986175,
+    "ast_hash": "713c9f92d43a7ad65b0524cc4ced7f48",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/server/src/discogs.ts": {
+    "mtime": 1791132985.7048159,
+    "ast_hash": "3e9e42634d232cb5ece7df777345861b",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/server/src/routes/auth.ts": {
+    "mtime": 1791102706.178166,
+    "ast_hash": "3101e89a9c4111d8fa3fbdf832fe71d2",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/server/src/routes/groups.ts": {
+    "mtime": 1791010347.8210247,
+    "ast_hash": "4ba95a069d02c5d9cdd2dd3e25e2e20e",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/server/src/routes/share.ts": {
+    "mtime": 1791047203.6806579,
+    "ast_hash": "aaedfa5f83b543b5d1d2e42d8ec95761",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/server/src/routes/collection.ts": {
+    "mtime": 1791274173.6004026,
+    "ast_hash": "d647bd8bbac7910415205fa9eec712c7",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/server/src/routes/stats.ts": {
+    "mtime": 1791010347.820203,
+    "ast_hash": "7cadd8a0fece5b24b5143e67e950c779",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/server/src/routes/wishlist.ts": {
+    "mtime": 1791102706.1774185,
+    "ast_hash": "d782c381c147f5195b73a0230234f995",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/server/src/routes/admin.ts": {
+    "mtime": 1791008919.3360293,
+    "ast_hash": "9adc0e90930a2d4f8f6b2af6d95efc51",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/server/src/routes/friends.ts": {
+    "mtime": 1791047203.6813338,
+    "ast_hash": "d6aa889a858c095886a8ceeeb39d21a1",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/server/src/routes/export.ts": {
+    "mtime": 1791132985.7062304,
+    "ast_hash": "f859baa22a62708b6281ae431a41e7e5",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/server/src/routes/discogs.ts": {
+    "mtime": 1790953397.1954136,
+    "ast_hash": "b05168d5f483645281e00f912d3195cb",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/package.json": {
+    "mtime": 1791133011.8405647,
+    "ast_hash": "670699c70bf4d83eff06c621eb5459c7",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/vite.config.ts": {
+    "mtime": 1791132985.7056832,
+    "ast_hash": "e7d0f26dbdaa94cc7dd3b80523ec248d",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/tsconfig.json": {
+    "mtime": 1790953105.5474977,
+    "ast_hash": "23a15f6abaf12343c50f63ffe5dbcb42",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/Feed.tsx": {
+    "mtime": 1791133000.3139505,
+    "ast_hash": "60c938d4082b2b7a97cdd1b45f5c6154",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/auth.tsx": {
+    "mtime": 1791132985.7059715,
+    "ast_hash": "d3472b9e4ea1c0c814223b19f0c0addd",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/CollectionPicker.tsx": {
+    "mtime": 1790958436.297678,
+    "ast_hash": "30d06e2edfaae571de3dc5de89ed53f3",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/main.tsx": {
+    "mtime": 1790963283.06888,
+    "ast_hash": "3f431ebe49583526c237030df1a179df",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/useProgressive.ts": {
+    "mtime": 1790972912.125016,
+    "ast_hash": "f9327dce32f7ed1c07ea06af977371b9",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/Market.tsx": {
+    "mtime": 1791030494.1469495,
+    "ast_hash": "c544e93a72c21c8e5b140be07719e553",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/CoverSize.tsx": {
+    "mtime": 1791133000.3134706,
+    "ast_hash": "6c4cf91d9883b539a5e96b6b2ead4046",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/FilterBar.tsx": {
+    "mtime": 1790977276.8982112,
+    "ast_hash": "905618c44da730b4526a8e6952abb732",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/Layout.tsx": {
+    "mtime": 1791030056.6448083,
+    "ast_hash": "d3b2db1231f7b730a5c85638340b9f3b",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/vite-env.d.ts": {
+    "mtime": 1790959068.8660793,
+    "ast_hash": "1ce722f9b1760f482dd4dc73ae2acff1",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/api.ts": {
+    "mtime": 1791132985.7065573,
+    "ast_hash": "b23422d3e837556c96e9dfa623660eaf",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/theme.tsx": {
+    "mtime": 1791132985.7106104,
+    "ast_hash": "041620669b599e0edbeb5d90366a55b6",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/Logo.tsx": {
+    "mtime": 1791132985.711154,
+    "ast_hash": "04da1eb14c5ed3e06046b8abf23417a5",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/ShareExport.tsx": {
+    "mtime": 1790959354.4070086,
+    "ast_hash": "81e161a7154799f47a92a594a47122e2",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/BarcodeScanner.tsx": {
+    "mtime": 1791036039.8692596,
+    "ast_hash": "bbbfc8af0438e372a21041444d440f2a",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/App.tsx": {
+    "mtime": 1791010997.2185025,
+    "ast_hash": "b3e7d0201a2745e644dd228908dec03e",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/Cover.tsx": {
+    "mtime": 1791030361.9912422,
+    "ast_hash": "067a703a4bb22dcb385f75e6d77c5d81",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/crates.tsx": {
+    "mtime": 1790974155.2288125,
+    "ast_hash": "583f4b1e934d449aa6db8a6bac213fae",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/ManageCollections.tsx": {
+    "mtime": 1791274077.4652221,
+    "ast_hash": "9a879a06ac26c401826e7878d4e44385",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/Sidebar.tsx": {
+    "mtime": 1791013203.240421,
+    "ast_hash": "873ab0fa35aeac403f1398c86c4d635a",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/LinkDiscogs.tsx": {
+    "mtime": 1791274189.5183084,
+    "ast_hash": "7891afab30e8a250a8df03b4fffb1a27",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/search.ts": {
+    "mtime": 1791047203.6848776,
+    "ast_hash": "72c578159cfd5fdfd13b996ba8ce02f2",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/ManualRecord.tsx": {
+    "mtime": 1791047860.779859,
+    "ast_hash": "0a71d922510b7d6794b5d75872f36818",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/CoffeeMenu.tsx": {
+    "mtime": 1791132985.7123914,
+    "ast_hash": "b0cb999a3f0dbf30ab1707e10abe8349",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/notify.tsx": {
+    "mtime": 1790958143.2731965,
+    "ast_hash": "63d05f1e9598fd143f45e42cf3749c57",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/AddRecord.tsx": {
+    "mtime": 1791036041.5254004,
+    "ast_hash": "355f5a3db7e3fa022fce1189079b3574",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/SearchBar.tsx": {
+    "mtime": 1790958642.8012924,
+    "ast_hash": "616b4981f149060de503af9a653abe03",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/Art.tsx": {
+    "mtime": 1790979140.599046,
+    "ast_hash": "e17288a7b6599b885648e9b4e972ffb3",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/pages/Shared.tsx": {
+    "mtime": 1791132985.7076378,
+    "ast_hash": "0a284945d85b281e07a334116d18fd34",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/pages/Friend.tsx": {
+    "mtime": 1791047214.7193542,
+    "ast_hash": "766c52b58e3f92ccd619791d8db6adab",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/pages/Wishlist.tsx": {
+    "mtime": 1791047203.686477,
+    "ast_hash": "2a9e3b3ef28703ddde7ad5781b77d2aa",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/pages/Friends.tsx": {
+    "mtime": 1791011008.762405,
+    "ast_hash": "4851a98756fb85bd6ce3a8c1415543dd",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/pages/Login.tsx": {
+    "mtime": 1791008919.3375208,
+    "ast_hash": "acb27ce2cec0e158111bd544b21e684e",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/pages/AdminUsers.tsx": {
+    "mtime": 1791133445.9213192,
+    "ast_hash": "67251e1f7dd4aaaa1f93b76d558705e6",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/pages/Release.tsx": {
+    "mtime": 1791274199.9007363,
+    "ast_hash": "ba98e6787765f079f799eaf7619542d7",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/pages/Collection.tsx": {
+    "mtime": 1791047203.686051,
+    "ast_hash": "113117cb03834e0ca92fc2efc9f12043",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/pages/Stats.tsx": {
+    "mtime": 1790972912.1330364,
+    "ast_hash": "2c34e77a18b189a79ffb7fcb77ea9aab",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/pages/Account.tsx": {
+    "mtime": 1791132985.7120357,
+    "ast_hash": "15aff1d6bf05393498f043281e8766a7",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/pages/ResetPassword.tsx": {
+    "mtime": 1790974197.8321207,
+    "ast_hash": "62c865cc8c3d2def9a70a053d8475407",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/demo/seed.ts": {
+    "mtime": 1791100349.5309582,
+    "ast_hash": "6eb800dab2b76d4505bf35366f43d6f3",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/demo/mockApi.ts": {
+    "mtime": 1791274199.9030206,
+    "ast_hash": "f568561900d2dfd0e0a9dcc967f7b44a",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/src/demo/cover.ts": {
+    "mtime": 1790961892.0122173,
+    "ast_hash": "7370dbdcaf5e64a2f7e07c6c73583a02",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/public/sw.js": {
+    "mtime": 1791132985.7152848,
+    "ast_hash": "fbe4b34551aa27984845247f985fcdad",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/CHANGELOG.md": {
+    "mtime": 1791133011.9015095,
+    "ast_hash": "dd5210e1bf10bf193cc54bae7a300b28",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/docker-compose.yml": {
+    "mtime": 1791132985.7013407,
+    "ast_hash": "78ce88db67c5bb0f82a3c603a3b25be5",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/README.md": {
+    "mtime": 1791132985.6976624,
+    "ast_hash": "25d0ffe4e99fefc0539ff16310d57dac",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/.github/workflows/docker.yml": {
+    "mtime": 1790971369.9904182,
+    "ast_hash": "5e431f16e8e894becfc37d0784edc251",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/.github/workflows/deploy-demo.yml": {
+    "mtime": 1791132985.7016797,
+    "ast_hash": "fe7f10b14d037b0f72fd5f109d8b9532",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/index.html": {
+    "mtime": 1791133000.3130012,
+    "ast_hash": "9f5e71fa75700de119e8fdcc0ec72986",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/docs/screenshots/shared-for-sale.png": {
+    "mtime": 1790981845.056907,
+    "ast_hash": "68d458ed37d00e84abc13102eb041a4b",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/docs/screenshots/for-sale-dark.png": {
+    "mtime": 1790981845.0545216,
+    "ast_hash": "dc62a54cd76eb566cc5ff5369cf1856a",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/docs/screenshots/collection-dark.png": {
+    "mtime": 1790981845.0500655,
+    "ast_hash": "77009924694fa2f778bc419002241c8e",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/docs/screenshots/release-dark.png": {
+    "mtime": 1790981845.0559235,
+    "ast_hash": "bfb3df6dd1722e7bd7bc15406c1b564d",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/docs/screenshots/collection-light.png": {
+    "mtime": 1790981845.0529943,
+    "ast_hash": "deea8366a600de4d0e6b8ee583cbd8a2",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/public/icon-512.png": {
+    "mtime": 1790963273.1990428,
+    "ast_hash": "9f76db9e8daff9fa0c17c4493fbaee79",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/public/favicon.svg": {
+    "mtime": 1790956442.4035883,
+    "ast_hash": "a8a384469bf4525366032b6647c89eae",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/public/developer.jpg": {
+    "mtime": 1790956352.2316859,
+    "ast_hash": "c583cba770f381fc770ff6045b603e08",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/public/apple-touch-icon.png": {
+    "mtime": 1790963274.0150275,
+    "ast_hash": "9230ee3a443ea6a6aac1b3c029833126",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/public/icon-192.png": {
+    "mtime": 1790963272.511056,
+    "ast_hash": "c88b23b01934902f9bc71d161f5645bf",
+    "semantic_hash": ""
+  },
+  "/workspaces/cratefolk/apps/web/public/icon-maskable-512.png": {
+    "mtime": 1790963273.9230292,
+    "ast_hash": "cb824552d4a50b8549bad3f0dad244cb",
+    "semantic_hash": ""
+  }
+}
