@@ -1,4 +1,4 @@
-import { ArrowLeft, Heart, Lightbulb, Pencil, Plus, Trash2, Users } from 'lucide-react'
+import { ArrowLeft, Heart, Lightbulb, Link2, Pencil, Plus, Trash2, Users } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../auth'
@@ -6,6 +6,7 @@ import Market, { money } from '../Market'
 import { api, GRADES, type Grade, type OwnedCopy, type ReleaseDetail, type Trivia } from '../api'
 import { useCrates } from '../crates'
 import CollectionPicker from '../CollectionPicker'
+import LinkDiscogs from '../LinkDiscogs'
 import ManualRecord from '../ManualRecord'
 import { useDialog, useToast } from '../notify'
 import Cover from '../Cover'
@@ -51,6 +52,7 @@ export default function Release() {
   const { groups, refresh } = useCrates()
   const [friends, setFriends] = useState<Array<{ id: number; name: string }>>([])
   const [editing, setEditing] = useState(false)
+  const [linking, setLinking] = useState(false)
   const toast = useToast()
   const { confirm } = useDialog()
   const navigate = useNavigate()
@@ -206,13 +208,19 @@ export default function Release() {
             <h1 className="text-3xl font-semibold tracking-tight">{r.title}</h1>
             <p className="mt-1 text-lg text-ink-300">{r.artist}</p>
             {r.id < 0 && (
-              <div className="mt-3 flex gap-4 text-sm">
+              <div className="mt-3 space-y-2 text-sm">
+                <p className="text-ink-500">Added by hand, so it isn’t synced to Discogs. Link it to its Discogs release to sync.</p>
+                <div className="flex flex-wrap gap-4">
+                <button onClick={() => setLinking(true)} className="flex items-center gap-1.5 text-wax hover:underline">
+                  <Link2 className="size-3.5" /> Link to Discogs
+                </button>
                 <button onClick={() => setEditing(true)} className="flex items-center gap-1.5 text-ink-300 hover:text-ink-100">
                   <Pencil className="size-3.5" /> Edit record
                 </button>
                 <button onClick={() => void deleteRecord()} className="flex items-center gap-1.5 text-ink-500 hover:text-danger">
                   <Trash2 className="size-3.5" /> Delete record
                 </button>
+                </div>
               </div>
             )}
           </div>
@@ -364,6 +372,16 @@ export default function Release() {
         </div>
       </div>
 
+      {linking && (
+        <LinkDiscogs
+          release={r}
+          onClose={() => setLinking(false)}
+          onLinked={(releaseId) => {
+            setLinking(false)
+            navigate(`/release/${releaseId}`, { replace: true })
+          }}
+        />
+      )}
       {editing && (
         <div className="fixed inset-0 z-20 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm sm:pt-[8vh]">
           <ManualRecord release={r} onClose={() => setEditing(false)} onAdded={() => void load()} />

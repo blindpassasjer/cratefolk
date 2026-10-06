@@ -217,6 +217,16 @@ on('DELETE', '/releases/:id', (m) => {
   s.manual = s.manual!.filter((x) => x !== rec)
   return { ok: true }
 })
+on('POST', '/releases/:id/link', (m, _q, b) => {
+  const s = load()
+  const rec = manualRecord(m[1])
+  const discogsId = Number(b.discogsId)
+  s.copies.forEach((c) => c.releaseId === rec.release.id && (c.releaseId = discogsId))
+  s.wishlist = s.wishlist.filter((w) => w.releaseId !== discogsId || !s.wishlist.some((x) => x.releaseId === rec.release.id))
+  s.wishlist.forEach((w) => w.releaseId === rec.release.id && (w.releaseId = discogsId))
+  s.manual = s.manual!.filter((x) => x !== rec)
+  return { releaseId: discogsId }
+})
 on('GET', '/releases/:id', (m) => {
   const s = load()
   const id = Number(m[1])

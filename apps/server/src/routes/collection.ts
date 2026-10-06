@@ -7,7 +7,7 @@ import { DiscogsError } from '../discogs.js'
 import { pushCopyEdit, pushNewCopy, pushUnwishlisted, rememberCopyRemoval, rememberWishRemoval } from '../discogsSync.js'
 import { logEvent } from '../events.js'
 import { triviaFor } from '../trivia.js'
-import { TRACKS_SQL, canAccessRelease, coverFile, createManualRelease, deleteManualRelease, ensureRelease, isCreator, updateManualRelease } from '../releases.js'
+import { TRACKS_SQL, canAccessRelease, coverFile, createManualRelease, deleteManualRelease, ensureRelease, isCreator, linkManualRelease, updateManualRelease } from '../releases.js'
 
 export const collectionRoutes = new Hono<AppEnv>()
 export const releaseRoutes = new Hono<AppEnv>()
@@ -212,6 +212,24 @@ releaseRoutes.post('/manual', async (c) => {
 
 // Only the creator can edit or delete a record they added by hand.
 const manualOwned = (id: number, userId: number) => Number.isInteger(id) && id < 0 && isCreator(id, userId)
+
+// Turns a hand-added record into the matching Discogs release, so its copies can sync to Discogs.
+releaseRoutes.post('/:id/link', async (c) => {
+  const id = Number(c.req.param('id'))
+  const userId = c.get('user').id
+  if (!manualOwned(id, userId)) return c.json({ error: 'Release not found' }, 404)
+  const body = (await c.req.json().catch(() => null)) as { discogsId?: unknown } | null
+  const discogsId = Number(body?.discogsId)
+  if (!Number.isInteger(discogsId) || discogsId <= 0) return c.json({ error: 'Pick a Discogs release' }, 400)
+  try {
+    const copyIds = await linkManualRelease(id, discogsId, userId)
+    for (const copyId of copyIds) pushNewCopy(userId, copyId)
+    return c.json({ releaseId: discogsId })
+  } catch (err) {
+    if (err instanceof DiscogsError) return c.json({ error: err.message }, 502)
+    throw err
+  }
+})
 
 releaseRoutes.patch('/:id', async (c) => {
   const id = Number(c.req.param('id'))

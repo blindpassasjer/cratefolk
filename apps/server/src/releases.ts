@@ -160,3 +160,17 @@ export function deleteManualRelease(id: number): void {
   fs.rmSync(coverPath(id), { force: true })
   fs.rmSync(thumbPath(id), { force: true })
 }
+
+/** Moves a manual record's copies and wishlist entry onto a real Discogs release, then deletes the manual record. */
+export async function linkManualRelease(id: number, discogsId: number, userId: number): Promise<number[]> {
+  await ensureRelease(discogsId, userId)
+  const copyIds = db.transaction(() => {
+    const ids = (db.prepare('SELECT id FROM copies WHERE release_id = ?').all(id) as Array<{ id: number }>).map((r) => r.id)
+    db.prepare('UPDATE copies SET release_id = ? WHERE release_id = ?').run(discogsId, id)
+    // They may already have the Discogs release wishlisted; then the manual entry is simply dropped.
+    db.prepare('UPDATE OR IGNORE wishlist SET release_id = ? WHERE release_id = ?').run(discogsId, id)
+    return ids
+  })()
+  deleteManualRelease(id)
+  return copyIds
+}
