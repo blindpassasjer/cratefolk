@@ -66,21 +66,48 @@ function OtherShops({ query }: { query: string }) {
   )
 }
 
+// The server feeds uncached lookups through a rate-limited Discogs queue (1-2.5s each). Firing one per card
+// at once would hold every browser connection open and starve the page's own requests, so run a few at a time.
+const MAX_CONCURRENT = 2
+const waiting: Array<() => void> = []
+let running = 0
+
+function pump() {
+  while (running < MAX_CONCURRENT && waiting.length) waiting.shift()!()
+}
+
+function limited<T>(task: () => Promise<T>, signal: AbortSignal): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const abort = () => reject(new DOMException('Aborted', 'AbortError'))
+    if (signal.aborted) return abort()
+    signal.addEventListener('abort', abort, { once: true })
+    waiting.push(() => {
+      if (signal.aborted) return // cancelled while queued: never hits the network
+      running++
+      task()
+        .then(resolve, reject)
+        .finally(() => {
+          running--
+          pump()
+        })
+    })
+    pump()
+  })
+}
+
 /** Discogs marketplace summary for a release: copies for sale, lowest price, and a link to the listings. */
 export default function Market({ releaseId, currency, search }: { releaseId: number; currency: string; search?: string }) {
   const [data, setData] = useState<MarketData | null>(null)
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
-    let cancelled = false
+    const ctrl = new AbortController()
     setData(null)
     setFailed(false)
-    api<MarketData>(`/market/${releaseId}`)
-      .then((d) => !cancelled && setData(d))
-      .catch(() => !cancelled && setFailed(true))
-    return () => {
-      cancelled = true
-    }
+    limited(() => api<MarketData>(`/market/${releaseId}`, { signal: ctrl.signal }), ctrl.signal)
+      .then((d) => !ctrl.signal.aborted && setData(d))
+      .catch(() => !ctrl.signal.aborted && setFailed(true))
+    return () => ctrl.abort()
   }, [releaseId, currency])
 
   const url = data?.url ?? `https://www.discogs.com/sell/release/${releaseId}`
