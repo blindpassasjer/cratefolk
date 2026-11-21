@@ -186,9 +186,8 @@ HTTPS is also required for barcode scanning: browsers only allow camera access o
 
 ### Running on Cloudflare instead
 
-Prefer not to run a server? Cratefolk also runs on Cloudflare Workers (D1 for the database, R2 for the covers), set up from the
-Cloudflare dashboard by connecting this GitHub repository. An existing Docker instance moves over from the web app: upload its
-`cratefolk.db` and covers under Account → Import. See [docs/cloudflare.md](docs/cloudflare.md).
+Prefer not to run a server? Cratefolk also runs on Cloudflare Workers (D1 for the database, R2 for the covers), and an existing
+instance can move over with its data. See [docs/cloudflare.md](docs/cloudflare.md).
 
 ### Configuration
 
@@ -198,7 +197,7 @@ Cloudflare dashboard by connecting this GitHub repository. An existing Docker in
 | `ADMIN_PASSWORD` | — (required) | Password of the admin account, re-synced on every start |
 | `DISCOGS_TOKEN` | empty | Discogs personal access token for searching; raises the rate limit and enables search thumbnails. Syncing uses each user's own token, set under Account → Discogs |
 | `SECRET_KEY` | generated | Optional passphrase for encrypting users' Discogs tokens. By default a random key is created in `data/secret.key` |
-| `SECRET_KEY_RAW` | empty | Cloudflare only, optional: the contents of an existing `data/secret.key`, to use that very key instead of the one the Worker generates |
+| `SECRET_KEY_RAW` | empty | Cloudflare only: the contents of an existing `data/secret.key`, when moving an instance over |
 | `COOKIE_SECURE` | `false` | Set to `true` when served over HTTPS |
 | `TRUST_PROXY` | `false` | Set to `true` only behind a reverse proxy that sets `X-Forwarded-For`; used for login rate limiting |
 | `PORT` | `6170` | Port the server listens on. Preset in the Docker image, only set it for local runs |

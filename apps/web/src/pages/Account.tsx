@@ -4,7 +4,6 @@ import { useAuth } from "../auth";
 import { useDialog, useToast } from "../notify";
 import { SHOPS, parseShops } from "../Market";
 import AdminUsers from "./AdminUsers";
-import ImportData from "./ImportData";
 
 const input =
   "w-full rounded-md border border-ink-700 bg-ink-900 px-3 py-2 text-sm outline-none transition-colors focus:border-wax disabled:opacity-60";
@@ -589,7 +588,6 @@ export default function Account() {
           {isAdmin && (
             <AdminUsers />
           )}
-          {isAdmin && <ImportData />}
         </div>
       </div>
     </div>

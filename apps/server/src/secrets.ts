@@ -1,8 +1,7 @@
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
-import { config, runtime } from './config.js'
-import { db } from './db.js'
+import { config } from './config.js'
 
 // Credentials we must be able to read back (users' Discogs tokens) are encrypted with AES-256-GCM.
 // The key is generated on first use and kept in the data directory (SECRET_KEY overrides it), so it
@@ -22,35 +21,6 @@ function loadKey(): Buffer {
 }
 
 let key: Buffer | null = null
-
-/**
- * Cloudflare Workers have no data directory to keep a generated key in, so unless SECRET_KEY / SECRET_KEY_RAW is set, a random key is made once
- * and kept in the database (settings table). That protects tokens from anyone who only sees an export of the other columns, not from
- * someone who can read the whole database: set SECRET_KEY if that matters to you. Call once at start-up; elsewhere the key loads lazily.
- */
-export async function prepareKey(): Promise<void> {
-  if (key) return
-  if (!runtime.worker || process.env.SECRET_KEY?.trim() || process.env.SECRET_KEY_RAW?.trim()) {
-    key = loadKey()
-    return
-  }
-  let row = await db.get<{ value: string }>("SELECT value FROM settings WHERE key = 'secret_key'")
-  if (!row) {
-    await db.run("INSERT OR IGNORE INTO settings (key, value) VALUES ('secret_key', ?)", crypto.randomBytes(32).toString('base64'))
-    row = await db.get<{ value: string }>("SELECT value FROM settings WHERE key = 'secret_key'")
-  }
-  key = Buffer.from(row!.value, 'base64')
-}
-
-/** Decrypts a value that was encrypted under another instance's key (the contents of its data/secret.key, base64) and encrypts it under this one's. */
-export function reencrypt(stored: string, oldKeyBase64: string): string {
-  const oldKey = Buffer.from(oldKeyBase64.trim(), 'base64')
-  if (oldKey.length !== 32) throw new Error('The old key must be the contents of secret.key')
-  const [iv, tag, data] = stored.split('.').map((b) => Buffer.from(b, 'base64')) as [Buffer, Buffer, Buffer]
-  const decipher = crypto.createDecipheriv('aes-256-gcm', oldKey, iv)
-  decipher.setAuthTag(tag)
-  return encrypt(Buffer.concat([decipher.update(data), decipher.final()]).toString('utf8'))
-}
 
 export function encrypt(plain: string): string {
   key ??= loadKey()

@@ -1,3 +1,4 @@
 .dev.vars
+migrations/
 .wrangler/
 node_modules
