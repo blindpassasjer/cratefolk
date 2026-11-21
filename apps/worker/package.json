@@ -5,9 +5,10 @@
   "type": "module",
   "description": "Cloudflare Workers deployment of Cratefolk. Not an npm workspace on purpose: the Docker build never installs wrangler.",
   "scripts": {
-    "dev": "wrangler dev -c ../../wrangler.jsonc",
-    "deploy": "wrangler deploy -c ../../wrangler.jsonc",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "dev": "wrangler dev",
+    "deploy": "npm run build:web && wrangler deploy",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build:web": "npm run build -w @cratefolk/web --prefix ../.."
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261119.1",

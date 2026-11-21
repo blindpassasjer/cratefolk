@@ -26,11 +26,11 @@ Everything below can be done in the Cloudflare dashboard and the Cratefolk web a
 
    | Setting | Value |
    |---|---|
-   | Worker name | `cratefolk` (it must match `"name"` in [`wrangler.jsonc`](../wrangler.jsonc)) |
-   | Root directory | the repository root (leave it as it is) |
-   | Build command | leave empty or the default |
-   | Deploy command | leave the default, `npx wrangler deploy` (the web app is built by wrangler itself, see `"build"` in `wrangler.jsonc`) |
-   | Build variable | only if the build complains about the Node version: `NODE_VERSION` = `22` (wrangler needs Node 22 or newer; `.nvmrc` says the same) |
+   | Worker name | `cratefolk` (it must match `"name"` in [`apps/worker/wrangler.jsonc`](../apps/worker/wrangler.jsonc)) |
+   | Root directory | the repository root (not `apps/worker`: the Worker imports `apps/server` and `apps/web`) |
+   | Build command | `npm ci && npm run build -w @cratefolk/web && cd apps/worker && npm ci` |
+   | Deploy command | `cd apps/worker && npx wrangler deploy` |
+   | Build variable | `NODE_VERSION` = `22` (wrangler needs Node 22 or newer; the repo's `.nvmrc` says the same) |
 
 3. Save and deploy. The first deploy creates the D1 database, the R2 bucket and the Queue and binds them (the Worker's configuration
    names them but has no ids on purpose), and the Worker creates its own tables when it first starts.
@@ -81,12 +81,13 @@ Notes:
 ## Developing against the Worker locally
 
 ```sh
-(cd apps/worker && npm ci)
+cd apps/worker && npm ci
 printf 'ADMIN_EMAIL=me@example.com\nADMIN_PASSWORD=change-me-please\nCOOKIE_SECURE=false\n' > .dev.vars
-(cd apps/worker && npm run dev)                 # wrangler dev with a local D1 and R2, on http://localhost:8787
+npm run dev                   # wrangler dev with a local D1 and R2, on http://localhost:8787
 ```
 
-`.dev.vars` is git-ignored and local state lives in `.wrangler/`, both in the repo root. The web app is built for you. Use Node 22 or newer. `npm run deploy` in `apps/worker` deploys from your own machine instead of GitHub; it
+`.dev.vars` is git-ignored and local state lives in `apps/worker/.wrangler/`. Build the web app once (`npm run build` in the repo root) so
+there is something to serve. Use Node 22 or newer. `npm run deploy` from this folder deploys from your own machine instead of GitHub; it
 needs `wrangler login` or a `CLOUDFLARE_API_TOKEN`.
 
 ## Limits worth knowing

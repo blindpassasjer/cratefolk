@@ -4,5 +4,3 @@ data
 .env
 *.log
 .DS_Store
-.dev.vars
-.wrangler/

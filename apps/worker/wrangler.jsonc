@@ -1,15 +1,12 @@
 {
   "name": "cratefolk",
-  "main": "apps/worker/src/index.ts",
+  "main": "src/index.ts",
   "compatibility_date": "2026-04-23",
   "compatibility_flags": ["nodejs_compat"],
 
-  // Builds the web app before every deploy, so Cloudflare's default build and deploy commands work as they are.
-  "build": { "command": "npm run build -w @cratefolk/web" },
-
   // The built web app. Only /api/* reaches the Worker; everything else is a static file, or index.html for the app's own routes.
   "assets": {
-    "directory": "apps/web/dist",
+    "directory": "../web/dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"]
