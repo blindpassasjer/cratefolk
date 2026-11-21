@@ -184,11 +184,6 @@ and set `COOKIE_SECURE=true` in `.env` so the session cookie is only sent over H
 HTTPS is also required for barcode scanning: browsers only allow camera access on secure pages (or
 `localhost`), so the scan button is hidden when Cratefolk is served over plain HTTP.
 
-### Running on Cloudflare instead
-
-Prefer not to run a server? Cratefolk also runs on Cloudflare Workers (D1 for the database, R2 for the covers), and an existing
-instance can move over with its data. See [docs/cloudflare.md](docs/cloudflare.md).
-
 ### Configuration
 
 | Variable | Default | Description |
@@ -197,7 +192,6 @@ instance can move over with its data. See [docs/cloudflare.md](docs/cloudflare.m
 | `ADMIN_PASSWORD` | — (required) | Password of the admin account, re-synced on every start |
 | `DISCOGS_TOKEN` | empty | Discogs personal access token for searching; raises the rate limit and enables search thumbnails. Syncing uses each user's own token, set under Account → Discogs |
 | `SECRET_KEY` | generated | Optional passphrase for encrypting users' Discogs tokens. By default a random key is created in `data/secret.key` |
-| `SECRET_KEY_RAW` | empty | Cloudflare only: the contents of an existing `data/secret.key`, when moving an instance over |
 | `COOKIE_SECURE` | `false` | Set to `true` when served over HTTPS |
 | `TRUST_PROXY` | `false` | Set to `true` only behind a reverse proxy that sets `X-Forwarded-For`; used for login rate limiting |
 | `PORT` | `6170` | Port the server listens on. Preset in the Docker image, only set it for local runs |
@@ -291,9 +285,7 @@ npm run dev        # API on :6170, web on :5173 (proxies /api)
 
 Open <http://localhost:5173>. Layout: `apps/server` (Hono + SQLite), `apps/web` (React + Vite +
 Tailwind). `npm run typecheck` checks both. Database migrations live in
-[`apps/server/src/migrations.ts`](apps/server/src/migrations.ts) and run on start. `apps/worker` is the Cloudflare Workers
-entry point ([docs/cloudflare.md](docs/cloudflare.md)); it shares the server code through a small database interface
-(`db.ts`) with a SQLite and a D1 driver, so SQL changes go in once and work on both.
+[`apps/server/src/db.ts`](apps/server/src/db.ts) and run on start.
 
 ## Tech stack
 

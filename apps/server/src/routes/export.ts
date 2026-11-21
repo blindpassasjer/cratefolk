@@ -77,11 +77,12 @@ exportRoutes.get('/collection.xlsx', async (c) => {
   const forSale = c.req.query('forSale') === '1'
   let name = forSale ? 'for-sale' : 'collection'
   if (groupId) {
-    const g = await db.get('SELECT name FROM collections WHERE id = ? AND user_id = ?', groupId, userId) as { name: string } | undefined
+    const g = db.prepare('SELECT name FROM collections WHERE id = ? AND user_id = ?').get(groupId, userId) as { name: string } | undefined
     if (!g) return c.json({ error: 'Crate not found' }, 404)
     name = slug(g.name) + (forSale ? '-for-sale' : '')
   }
-  const rows = await db.all(
+  const rows = db
+    .prepare(
       `SELECT r.id AS releaseId, r.artist, r.title, r.year, r.country, r.label, r.catno, r.format, r.barcode,
               r.genres, r.styles, c.media_condition AS media, c.sleeve_condition AS sleeve, c.notes,
               CASE WHEN c.for_sale THEN 'Yes' ELSE '' END AS forSale, c.asking_price AS price, c.price_currency AS currency,
@@ -92,7 +93,9 @@ exportRoutes.get('/collection.xlsx', async (c) => {
        WHERE (c.user_id = ? OR c.co_owner_id = ?)
        ${groupId ? 'AND c.id IN (SELECT copy_id FROM collection_copies WHERE collection_id = ?)' : ''}
        ${forSale ? 'AND c.for_sale = 1' : ''}
-       ORDER BY r.artist COLLATE NOCASE, r.year, r.title COLLATE NOCASE`, ...(groupId ? [userId, userId, groupId] : [userId, userId])) as Row[]
+       ORDER BY r.artist COLLATE NOCASE, r.year, r.title COLLATE NOCASE`,
+    )
+    .all(...(groupId ? [userId, userId, groupId] : [userId, userId])) as Row[]
 
   const columns: Column[] = [
     ...COMMON,
@@ -109,11 +112,14 @@ exportRoutes.get('/collection.xlsx', async (c) => {
 })
 
 exportRoutes.get('/wishlist.xlsx', async (c) => {
-  const rows = await db.all(
+  const rows = db
+    .prepare(
       `SELECT r.id AS releaseId, r.artist, r.title, r.year, r.country, r.label, r.catno, r.format, r.barcode,
               r.genres, r.styles, w.notes, substr(w.added_at, 1, 10) AS added
        FROM wishlist w JOIN releases r ON r.id = w.release_id
-       WHERE w.user_id = ? ORDER BY r.artist COLLATE NOCASE, r.year, r.title COLLATE NOCASE`, c.get('user').id) as Row[]
+       WHERE w.user_id = ? ORDER BY r.artist COLLATE NOCASE, r.year, r.title COLLATE NOCASE`,
+    )
+    .all(c.get('user').id) as Row[]
   const columns: Column[] = [...COMMON, { header: 'Notes', key: 'notes', width: 36 }, ...TAIL]
   return download(c, await sheet('Wishlist', columns, rows.map(shape)), 'wishlist')
 })

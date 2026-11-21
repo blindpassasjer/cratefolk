@@ -1,4 +1,4 @@
-import { config, runtime } from './config.js'
+import { config } from './config.js'
 
 const BASE = 'https://api.discogs.com'
 const USER_AGENT = 'Cratefolk/0.0.1 +https://github.com/blindpassasjer/cratefolk'
@@ -35,20 +35,10 @@ async function pump(): Promise<void> {
   pumping = false
 }
 
-// A Cloudflare Worker can't share one pacing queue between requests (a promise can't be settled from another request), so there each
-// call just waits for its own slot. The long Discogs sync runs alone in one queue consumer, which is where the pacing matters.
-async function paced<T>(task: () => Promise<T>, gap: number): Promise<T> {
-  const wait = lastStart + gap - Date.now()
-  lastStart = Date.now() + Math.max(wait, 0)
-  if (wait > 0) await new Promise((r) => setTimeout(r, wait))
-  return task()
-}
-
 function schedule<T>(task: () => Promise<T>, priority: number, gap = gapFor(null)): Promise<T> {
-  if (runtime.worker) return paced(task, gap)
-  return new Promise<T>(async (resolve, reject) => {
+  return new Promise<T>((resolve, reject) => {
     queue.push({ priority, gap, run: () => task().then(resolve, reject) })
-    void await pump()
+    void pump()
   })
 }
 

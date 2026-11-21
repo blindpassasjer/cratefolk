@@ -1,17 +1,5 @@
 # Changelog
 
-## Unreleased
-
-### Added
-- **Cratefolk can run on Cloudflare Workers.** D1 holds the database, R2 the covers, a Queue runs Discogs syncs and a cron trigger clears old sessions. An existing Docker instance can move over with its data, covers and saved Discogs tokens: see [docs/cloudflare.md](docs/cloudflare.md). Docker stays the default and keeps working as before.
-
-### Changed
-- The server's database layer is now asynchronous and sits behind one small interface, so the same code runs on SQLite (Docker) and D1. Changes that touch several rows are applied as a single batch, which is atomic on both.
-- Failed login attempts are counted in the database instead of in memory, so the throttle now survives restarts. Discogs sync progress is kept there too.
-
-### Upgrading
-Nothing to do. Database migrations run automatically on start (two small tables for the above). Back up `data/` first, as always: older versions can't read a migrated database.
-
 ## 0.7.0 (2026-10-04)
 
 ### Changed

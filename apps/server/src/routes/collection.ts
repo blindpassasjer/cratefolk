@@ -1,14 +1,13 @@
+import fs from 'node:fs'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { requireUser, type AppEnv } from '../auth.js'
-import { background } from '../background.js'
-import { db, stmt } from '../db.js'
+import { db } from '../db.js'
 import { DiscogsError } from '../discogs.js'
-import { pushCopyEdit, pushNewCopy, pushUnwishlisted, copyRemovalStmt, rememberCopyRemoval, wishRemovalStmt } from '../discogsSync.js'
-import { eventStmt, logEvent } from '../events.js'
+import { pushCopyEdit, pushNewCopy, pushUnwishlisted, rememberCopyRemoval, rememberWishRemoval } from '../discogsSync.js'
+import { logEvent } from '../events.js'
 import { triviaFor } from '../trivia.js'
-import { covers } from '../covers.js'
-import { TRACKS_SQL, canAccessRelease, createManualRelease, deleteManualRelease, ensureRelease, isCreator, linkManualRelease, updateManualRelease } from '../releases.js'
+import { TRACKS_SQL, canAccessRelease, coverFile, createManualRelease, deleteManualRelease, ensureRelease, isCreator, linkManualRelease, updateManualRelease } from '../releases.js'
 
 export const collectionRoutes = new Hono<AppEnv>()
 export const releaseRoutes = new Hono<AppEnv>()
@@ -36,14 +35,17 @@ const withIds = (row: unknown) => {
   return { ...r, collectionIds: r.collectionIds ? r.collectionIds.split(',').map(Number) : [] }
 }
 
-collectionRoutes.get('/', async (c) => {
+collectionRoutes.get('/', (c) => {
   const groupId = Number(c.req.query('collection')) || null
   const forSale = c.req.query('forSale') === '1'
-  const rows = await db.all(
+  const rows = db
+    .prepare(
       `${COPY_SELECT} WHERE (c.user_id = ? OR c.co_owner_id = ?)
        ${groupId ? 'AND c.id IN (SELECT copy_id FROM collection_copies WHERE collection_id = ?)' : ''}
        ${forSale ? 'AND c.for_sale = 1' : ''}
-       ORDER BY c.added_at DESC, c.id DESC`, ...(groupId ? [c.get('user').id, c.get('user').id, groupId] : [c.get('user').id, c.get('user').id]))
+       ORDER BY c.added_at DESC, c.id DESC`,
+    )
+    .all(...(groupId ? [c.get('user').id, c.get('user').id, groupId] : [c.get('user').id, c.get('user').id]))
   return c.json({ copies: rows.map(withIds) })
 })
 
@@ -66,16 +68,20 @@ collectionRoutes.post('/', async (c) => {
   }
   const userId = c.get('user').id
   // Owning a record takes it off the wishlist.
-  const [, removed, info] = await db.batch([
-    wishRemovalStmt(userId, releaseId),
-    stmt('DELETE FROM wishlist WHERE user_id = ? AND release_id = ?', userId, releaseId),
-    stmt('INSERT INTO copies (user_id, release_id, media_condition, sleeve_condition, notes) VALUES (?, ?, ?, ?, ?)', userId, releaseId, mediaCondition ?? null, sleeveCondition ?? null, notes ?? null),
-  ])
-  const wasWished = removed!.changes > 0
-  await logEvent(userId, 'added', releaseId)
-  background(pushNewCopy(userId, info!.lastInsertRowid))
-  if (wasWished) background(pushUnwishlisted(userId, releaseId))
-  const copy = withIds(await db.get(`${COPY_SELECT} WHERE c.id = ?`, info!.lastInsertRowid))
+  let wasWished = false
+  const info = db.transaction(() => {
+    rememberWishRemoval(userId, releaseId)
+    wasWished = db.prepare('DELETE FROM wishlist WHERE user_id = ? AND release_id = ?').run(userId, releaseId).changes > 0
+    return db
+      .prepare(
+        'INSERT INTO copies (user_id, release_id, media_condition, sleeve_condition, notes) VALUES (?, ?, ?, ?, ?)',
+      )
+      .run(userId, releaseId, mediaCondition ?? null, sleeveCondition ?? null, notes ?? null)
+  })()
+  logEvent(userId, 'added', releaseId)
+  pushNewCopy(userId, Number(info.lastInsertRowid))
+  if (wasWished) pushUnwishlisted(userId, releaseId)
+  const copy = withIds(db.prepare(`${COPY_SELECT} WHERE c.id = ?`).get(info.lastInsertRowid))
   return c.json({ copy }, 201)
 })
 
@@ -95,53 +101,58 @@ collectionRoutes.patch('/:id', async (c) => {
   const parsed = patchSchema.safeParse(await c.req.json().catch(() => null))
   if (!Number.isInteger(id) || !parsed.success) return c.json({ error: 'Invalid request' }, 400)
   const me = c.get('user').id
-  const copy = await db.get('SELECT user_id AS ownerId, release_id AS releaseId, for_sale AS forSale FROM copies WHERE id = ? AND (user_id = ? OR co_owner_id = ?)', id, me, me) as { ownerId: number; releaseId: number; forSale: number } | undefined
+  const copy = db.prepare('SELECT user_id AS ownerId, release_id AS releaseId, for_sale AS forSale FROM copies WHERE id = ? AND (user_id = ? OR co_owner_id = ?)').get(id, me, me) as { ownerId: number; releaseId: number; forSale: number } | undefined
   if (!copy) return c.json({ error: 'Copy not found' }, 404)
 
   const { mediaCondition, sleeveCondition, notes, forSale, askingPrice, coOwnerId } = parsed.data
   if (coOwnerId !== undefined) {
     if (copy.ownerId !== me) return c.json({ error: 'Only the person who added this copy can change who it is shared with' }, 403)
-    if (coOwnerId !== null && (coOwnerId === me || !await db.get('SELECT 1 FROM users WHERE id = ? AND disabled = 0', coOwnerId))) {
+    if (coOwnerId !== null && (coOwnerId === me || !db.prepare('SELECT 1 FROM users WHERE id = ? AND disabled = 0').get(coOwnerId))) {
       return c.json({ error: 'Choose another friend to share this copy with' }, 400)
     }
-    await db.run('UPDATE copies SET co_owner_id = ? WHERE id = ?', coOwnerId, id)
+    db.prepare('UPDATE copies SET co_owner_id = ? WHERE id = ?').run(coOwnerId, id)
   }
-  if (mediaCondition !== undefined) await db.run('UPDATE copies SET media_condition = ? WHERE id = ?', mediaCondition, id)
-  if (sleeveCondition !== undefined) await db.run('UPDATE copies SET sleeve_condition = ? WHERE id = ?', sleeveCondition, id)
-  if (notes !== undefined) await db.run('UPDATE copies SET notes = ? WHERE id = ?', notes, id)
-  if (mediaCondition !== undefined || sleeveCondition !== undefined || notes !== undefined) background(pushCopyEdit(id, { mediaCondition, sleeveCondition, notes }))
+  if (mediaCondition !== undefined) db.prepare('UPDATE copies SET media_condition = ? WHERE id = ?').run(mediaCondition, id)
+  if (sleeveCondition !== undefined) db.prepare('UPDATE copies SET sleeve_condition = ? WHERE id = ?').run(sleeveCondition, id)
+  if (notes !== undefined) db.prepare('UPDATE copies SET notes = ? WHERE id = ?').run(notes, id)
+  if (mediaCondition !== undefined || sleeveCondition !== undefined || notes !== undefined) pushCopyEdit(id, { mediaCondition, sleeveCondition, notes })
   if (forSale !== undefined) {
-    await db.run('UPDATE copies SET for_sale = ? WHERE id = ?', forSale ? 1 : 0, id)
-    if (forSale && !copy.forSale) await logEvent(me, 'listed', copy.releaseId)
+    db.prepare('UPDATE copies SET for_sale = ? WHERE id = ?').run(forSale ? 1 : 0, id)
+    if (forSale && !copy.forSale) logEvent(me, 'listed', copy.releaseId)
   }
   if (askingPrice !== undefined) {
     // The price is recorded in the owner's current currency so it stays meaningful if they switch later.
-    await db.run('UPDATE copies SET asking_price = ?, price_currency = ? WHERE id = ?', askingPrice,
+    db.prepare('UPDATE copies SET asking_price = ?, price_currency = ? WHERE id = ?').run(
+      askingPrice,
       askingPrice === null ? null : c.get('user').currency,
-      id)
+      id,
+    )
   }
-  return c.json({ copy: withIds(await db.get(`${COPY_SELECT} WHERE c.id = ?`, id)) })
+  return c.json({ copy: withIds(db.prepare(`${COPY_SELECT} WHERE c.id = ?`).get(id)) })
 })
 
 // Selling a copy takes it out of the collection (for a shared copy, out of both) and tells friends it's gone.
-collectionRoutes.post('/:id/sold', async (c) => {
+collectionRoutes.post('/:id/sold', (c) => {
   const id = Number(c.req.param('id'))
   const me = c.get('user').id
-  const copy = await db.get('SELECT release_id AS releaseId FROM copies WHERE id = ? AND user_id = ?', id, me) as { releaseId: number } | undefined
+  const copy = db.prepare('SELECT release_id AS releaseId FROM copies WHERE id = ? AND user_id = ?').get(id, me) as { releaseId: number } | undefined
   if (!copy) return c.json({ error: 'Copy not found' }, 404)
-  const sold = eventStmt(me, 'sold', copy.releaseId)
-  await db.batch([copyRemovalStmt(id, me), stmt('DELETE FROM copies WHERE id = ?', id), ...(sold ? [sold] : [])])
+  db.transaction(() => {
+    rememberCopyRemoval(id, me)
+    db.prepare('DELETE FROM copies WHERE id = ?').run(id)
+    logEvent(me, 'sold', copy.releaseId)
+  })()
   return c.json({ ok: true })
 })
 
 // The person who added a shared copy deletes it for both; the co-owner can only step away from it.
-collectionRoutes.delete('/:id', async (c) => {
+collectionRoutes.delete('/:id', (c) => {
   const id = Number(c.req.param('id'))
   const me = c.get('user').id
-  await rememberCopyRemoval(id, me)
-  const res = await db.run('DELETE FROM copies WHERE id = ? AND user_id = ?', id, me)
+  rememberCopyRemoval(id, me)
+  const res = db.prepare('DELETE FROM copies WHERE id = ? AND user_id = ?').run(id, me)
   if (res.changes) return c.json({ ok: true })
-  const left = await db.run('UPDATE copies SET co_owner_id = NULL WHERE id = ? AND co_owner_id = ?', id, me)
+  const left = db.prepare('UPDATE copies SET co_owner_id = NULL WHERE id = ? AND co_owner_id = ?').run(id, me)
   return left.changes ? c.json({ ok: true }) : c.json({ error: 'Copy not found' }, 404)
 })
 
@@ -189,28 +200,30 @@ releaseRoutes.post('/manual', async (c) => {
   const { cover, force, ...rest } = parsed.data
   const userId = c.get('user').id
   if (!force) {
-    const dupe = await db.get('SELECT id FROM releases WHERE owner_id = ? AND id < 0 AND artist = ? COLLATE NOCASE AND title = ? COLLATE NOCASE', userId, rest.artist, rest.title) as { id: number } | undefined
+    const dupe = db
+      .prepare('SELECT id FROM releases WHERE owner_id = ? AND id < 0 AND artist = ? COLLATE NOCASE AND title = ? COLLATE NOCASE')
+      .get(userId, rest.artist, rest.title) as { id: number } | undefined
     if (dupe) return c.json({ error: `You already added “${rest.title}” by ${rest.artist}`, releaseId: dupe.id }, 409)
   }
   const image = decodeCover(cover)
   if (typeof image === 'string') return c.json({ error: image }, 400)
-  return c.json({ releaseId: await createManualRelease({ ...rest, cover: image ?? null }, userId) }, 201)
+  return c.json({ releaseId: createManualRelease({ ...rest, cover: image ?? null }, userId) }, 201)
 })
 
 // Only the creator can edit or delete a record they added by hand.
-const manualOwned = async (id: number, userId: number) => Number.isInteger(id) && id < 0 && await isCreator(id, userId)
+const manualOwned = (id: number, userId: number) => Number.isInteger(id) && id < 0 && isCreator(id, userId)
 
 // Turns a hand-added record into the matching Discogs release, so its copies can sync to Discogs.
 releaseRoutes.post('/:id/link', async (c) => {
   const id = Number(c.req.param('id'))
   const userId = c.get('user').id
-  if (!await manualOwned(id, userId)) return c.json({ error: 'Release not found' }, 404)
+  if (!manualOwned(id, userId)) return c.json({ error: 'Release not found' }, 404)
   const body = (await c.req.json().catch(() => null)) as { discogsId?: unknown } | null
   const discogsId = Number(body?.discogsId)
   if (!Number.isInteger(discogsId) || discogsId <= 0) return c.json({ error: 'Pick a Discogs release' }, 400)
   try {
     const copyIds = await linkManualRelease(id, discogsId, userId)
-    for (const copyId of copyIds) background(pushNewCopy(userId, copyId))
+    for (const copyId of copyIds) pushNewCopy(userId, copyId)
     return c.json({ releaseId: discogsId })
   } catch (err) {
     if (err instanceof DiscogsError) return c.json({ error: err.message }, 502)
@@ -220,28 +233,28 @@ releaseRoutes.post('/:id/link', async (c) => {
 
 releaseRoutes.patch('/:id', async (c) => {
   const id = Number(c.req.param('id'))
-  if (!await manualOwned(id, c.get('user').id)) return c.json({ error: 'Release not found' }, 404)
+  if (!manualOwned(id, c.get('user').id)) return c.json({ error: 'Release not found' }, 404)
   const parsed = manualSchema.safeParse(await c.req.json().catch(() => null))
   if (!parsed.success) return c.json({ error: validationMessage(parsed.error) }, 400)
   const { cover, force: _force, ...rest } = parsed.data
   const image = decodeCover(cover)
   if (typeof image === 'string') return c.json({ error: image }, 400)
-  await updateManualRelease(id, rest, image)
+  updateManualRelease(id, rest, image)
   return c.json({ ok: true })
 })
 
-releaseRoutes.delete('/:id', async (c) => {
+releaseRoutes.delete('/:id', (c) => {
   const id = Number(c.req.param('id'))
-  if (!await manualOwned(id, c.get('user').id)) return c.json({ error: 'Release not found' }, 404)
-  await deleteManualRelease(id)
+  if (!manualOwned(id, c.get('user').id)) return c.json({ error: 'Release not found' }, 404)
+  deleteManualRelease(id)
   return c.json({ ok: true })
 })
 
 releaseRoutes.get('/:id/cover', async (c) => {
   const id = Number(c.req.param('id'))
-  const file = Number.isInteger(id) && await canAccessRelease(id, c.get('user').id) ? await covers.read(id, c.req.query('size') === 'thumb') : null
+  const file = Number.isInteger(id) && canAccessRelease(id, c.get('user').id) ? await coverFile(id, c.req.query('size') === 'thumb') : null
   if (!file) return c.json({ error: 'No cover' }, 404)
-  return c.body(file, 200, {
+  return c.body(await fs.promises.readFile(file), 200, {
     'Content-Type': 'image/jpeg',
     // Discogs covers never change; a manual record's cover can be replaced when it is edited.
     'Cache-Control': id > 0 ? 'private, max-age=31536000, immutable' : 'private, no-cache',
@@ -250,28 +263,36 @@ releaseRoutes.get('/:id/cover', async (c) => {
 
 releaseRoutes.get('/:id/trivia', async (c) => {
   const id = Number(c.req.param('id'))
-  if (!Number.isInteger(id) || !await canAccessRelease(id, c.get('user').id)) return c.json({ error: 'Release not found' }, 404)
+  if (!Number.isInteger(id) || !canAccessRelease(id, c.get('user').id)) return c.json({ error: 'Release not found' }, 404)
   return c.json({ trivia: await triviaFor(id, c.get('user').id) })
 })
 
-releaseRoutes.get('/:id', async (c) => {
+releaseRoutes.get('/:id', (c) => {
   const id = Number(c.req.param('id'))
-  if (!Number.isInteger(id) || !await canAccessRelease(id, c.get('user').id)) return c.json({ error: 'Release not found' }, 404)
-  const r = await db.get(
+  if (!Number.isInteger(id) || !canAccessRelease(id, c.get('user').id)) return c.json({ error: 'Release not found' }, 404)
+  const r = db
+    .prepare(
       `SELECT id, master_id AS masterId, title, artist, year, country, label, catno, barcode, format,
               genres, styles, tracklist, notes, has_cover AS hasCover
-       FROM releases WHERE id = ?`, id) as Record<string, unknown> | undefined
+       FROM releases WHERE id = ?`,
+    )
+    .get(id) as Record<string, unknown> | undefined
   if (!r) return c.json({ error: 'Release not found' }, 404)
-  const copies = (await db.all(
+  const copies = db
+    .prepare(
       `SELECT id AS copyId, media_condition AS mediaCondition, sleeve_condition AS sleeveCondition,
               notes, added_at AS addedAt, for_sale AS forSale, asking_price AS askingPrice,
               price_currency AS priceCurrency, user_id AS ownerId, co_owner_id AS coOwnerId,
               (SELECT name FROM users WHERE id = copies.user_id) AS ownerName,
               (SELECT name FROM users WHERE id = copies.co_owner_id) AS coOwnerName,
               (SELECT group_concat(collection_id) FROM collection_copies WHERE copy_id = copies.id) AS collectionIds
-       FROM copies WHERE release_id = ? AND (user_id = ? OR co_owner_id = ?) ORDER BY id`, id, c.get('user').id, c.get('user').id))
+       FROM copies WHERE release_id = ? AND (user_id = ? OR co_owner_id = ?) ORDER BY id`,
+    )
+    .all(id, c.get('user').id, c.get('user').id)
     .map(withIds)
-  const wishlisted = await db.get('SELECT id, notes FROM wishlist WHERE release_id = ? AND user_id = ?', id, c.get('user').id)
+  const wishlisted = db
+    .prepare('SELECT id, notes FROM wishlist WHERE release_id = ? AND user_id = ?')
+    .get(id, c.get('user').id)
   return c.json({
     wishlisted: wishlisted ?? null,
     release: {

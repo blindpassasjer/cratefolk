@@ -5,8 +5,7 @@
   "license": "Apache-2.0",
   "type": "module",
   "workspaces": [
-    "apps/server",
-    "apps/web"
+    "apps/*"
   ],
   "engines": {
     "node": ">=20"

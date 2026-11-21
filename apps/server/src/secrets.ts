@@ -6,15 +6,8 @@ import { config } from './config.js'
 // Credentials we must be able to read back (users' Discogs tokens) are encrypted with AES-256-GCM.
 // The key is generated on first use and kept in the data directory (SECRET_KEY overrides it), so it
 // travels with your backups of data/ but is never in the database itself.
-// SECRET_KEY_RAW is the contents of an existing data/secret.key (base64): it's how an instance that moves to Cloudflare
-// Workers (which has no data directory) keeps being able to read the Discogs tokens it already stored.
 function loadKey(): Buffer {
   if (process.env.SECRET_KEY?.trim()) return crypto.createHash('sha256').update(process.env.SECRET_KEY.trim()).digest()
-  if (process.env.SECRET_KEY_RAW?.trim()) {
-    const raw = Buffer.from(process.env.SECRET_KEY_RAW.trim(), 'base64')
-    if (raw.length !== 32) throw new Error('SECRET_KEY_RAW must be the base64 of 32 bytes (the contents of data/secret.key)')
-    return raw
-  }
   const file = path.join(config.dataDir, 'secret.key')
   if (!fs.existsSync(file)) fs.writeFileSync(file, crypto.randomBytes(32).toString('base64'), { mode: 0o600 })
   return Buffer.from(fs.readFileSync(file, 'utf8').trim(), 'base64')

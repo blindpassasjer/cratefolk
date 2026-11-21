@@ -1,68 +1,255 @@
-// A small async database interface with two drivers: better-sqlite3 (Docker / Node, see db.node.ts) and Cloudflare D1
-// (see db.d1.ts). Everything else talks to `db` and never to a driver, so the same code runs on both.
-// D1 has no interactive transactions, so the only atomic unit is `batch`: a list of statements that all apply or none do.
+import fs from 'node:fs'
+import path from 'node:path'
+import Database from 'better-sqlite3'
+import { config } from './config.js'
 
-export type Param = string | number | bigint | null | undefined | Uint8Array
-export interface RunResult {
-  changes: number
-  lastInsertRowid: number
+// Append-only: never edit an applied migration, add a new entry instead.
+const migrations: string[] = [
+  `
+  CREATE TABLE users (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    email         TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    name          TEXT NOT NULL,
+    password_hash TEXT NOT NULL,
+    role          TEXT NOT NULL CHECK (role IN ('admin', 'user')),
+    disabled      INTEGER NOT NULL DEFAULT 0,
+    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE sessions (
+    token_hash TEXT PRIMARY KEY,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX sessions_user_id ON sessions(user_id);
+  `,
+  `
+  -- Shared cache of Discogs release metadata, keyed by Discogs release ID.
+  CREATE TABLE releases (
+    id         INTEGER PRIMARY KEY,
+    master_id  INTEGER,
+    title      TEXT NOT NULL,
+    artist     TEXT NOT NULL,
+    year       INTEGER,
+    country    TEXT,
+    label      TEXT,
+    catno      TEXT,
+    barcode    TEXT,
+    format     TEXT,
+    genres     TEXT NOT NULL DEFAULT '[]',
+    styles     TEXT NOT NULL DEFAULT '[]',
+    tracklist  TEXT NOT NULL DEFAULT '[]',
+    notes      TEXT,
+    has_cover  INTEGER NOT NULL DEFAULT 0,
+    fetched_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  -- One row per physical copy a user owns.
+  CREATE TABLE copies (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    release_id      INTEGER NOT NULL REFERENCES releases(id),
+    media_condition TEXT,
+    sleeve_condition TEXT,
+    notes           TEXT,
+    added_at        TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX copies_user_id ON copies(user_id);
+  CREATE INDEX copies_release_id ON copies(release_id);
+  `,
+  `
+  CREATE TABLE wishlist (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    release_id INTEGER NOT NULL REFERENCES releases(id),
+    notes      TEXT,
+    added_at   TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (user_id, release_id)
+  );
+  `,
+  `
+  ALTER TABLE users ADD COLUMN currency TEXT NOT NULL DEFAULT 'USD';
+
+  CREATE TABLE market_stats (
+    release_id   INTEGER NOT NULL,
+    currency     TEXT NOT NULL,
+    num_for_sale INTEGER NOT NULL,
+    lowest_price REAL,
+    fetched_at   INTEGER NOT NULL,
+    PRIMARY KEY (release_id, currency)
+  );
+  `,
+  `
+  -- User-made groupings of owned copies ("Jazz", "For sale", ...). A copy can be in several.
+  CREATE TABLE collections (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name       TEXT NOT NULL COLLATE NOCASE,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (user_id, name)
+  );
+
+  CREATE TABLE collection_copies (
+    collection_id INTEGER NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+    copy_id       INTEGER NOT NULL REFERENCES copies(id) ON DELETE CASCADE,
+    added_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (collection_id, copy_id)
+  );
+  CREATE INDEX collection_copies_copy_id ON collection_copies(copy_id);
+  `,
+  `
+  -- Public read-only links. kind: 'all' (every owned record), 'group' (one collection), 'wishlist'.
+  CREATE TABLE shares (
+    token      TEXT PRIMARY KEY,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    kind       TEXT NOT NULL CHECK (kind IN ('all', 'group', 'wishlist')),
+    group_id   INTEGER REFERENCES collections(id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE UNIQUE INDEX shares_target ON shares(user_id, kind, COALESCE(group_id, 0));
+  `,
+  `
+  -- A copy can be put up for sale with an asking price (in the owner's currency at the time it was set).
+  ALTER TABLE copies ADD COLUMN for_sale INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE copies ADD COLUMN asking_price REAL;
+  ALTER TABLE copies ADD COLUMN price_currency TEXT;
+
+  -- Widen shares.kind to allow a public 'forsale' link (SQLite can't alter a CHECK constraint).
+  CREATE TABLE shares_new (
+    token      TEXT PRIMARY KEY,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    kind       TEXT NOT NULL CHECK (kind IN ('all', 'group', 'wishlist', 'forsale')),
+    group_id   INTEGER REFERENCES collections(id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  INSERT INTO shares_new SELECT token, user_id, kind, group_id, created_at FROM shares;
+  DROP TABLE shares;
+  ALTER TABLE shares_new RENAME TO shares;
+  CREATE UNIQUE INDEX shares_target ON shares(user_id, kind, COALESCE(group_id, 0));
+  `,
+  `
+  -- Records added by hand (negative IDs) belong to the user who made them; Discogs releases stay shared.
+  ALTER TABLE releases ADD COLUMN owner_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+  UPDATE releases SET owner_id = COALESCE(
+    (SELECT user_id FROM copies WHERE release_id = releases.id ORDER BY id LIMIT 1),
+    (SELECT user_id FROM wishlist WHERE release_id = releases.id ORDER BY id LIMIT 1)
+  ) WHERE id < 0;
+  `,
+  `
+  -- One-time password reset links, created by an admin. Only the hash of the token is stored.
+  CREATE TABLE password_resets (
+    token_hash TEXT PRIMARY KEY,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at INTEGER NOT NULL
+  );
+  CREATE INDEX password_resets_user_id ON password_resets(user_id);
+  `,
+  `
+  -- Wikipedia trivia per release. facts is NULL when no article was found, so that is cached too.
+  CREATE TABLE trivia (
+    release_id INTEGER PRIMARY KEY REFERENCES releases(id) ON DELETE CASCADE,
+    facts      TEXT,
+    title      TEXT,
+    url        TEXT,
+    fetched_at INTEGER NOT NULL
+  );
+  `,
+  `
+  -- Wikipedia facts about an artist, shared by every release of theirs. Same shape as trivia.
+  CREATE TABLE artist_trivia (
+    artist_key TEXT PRIMARY KEY,
+    facts      TEXT,
+    title      TEXT,
+    url        TEXT,
+    fetched_at INTEGER NOT NULL
+  );
+  `,
+  `
+  -- Instance-wide admin settings as key/value pairs. Registration is closed unless set to '1'.
+  CREATE TABLE settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
+  `,
+  `
+  -- A copy can be jointly owned: it then shows up in both owners' collections, and either can edit it.
+  ALTER TABLE copies ADD COLUMN co_owner_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+  CREATE INDEX copies_co_owner_id ON copies(co_owner_id);
+
+  -- Opt-in: let other signed-in friends browse this user's collection and/or wishlist.
+  ALTER TABLE users ADD COLUMN share_collection INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE users ADD COLUMN share_wishlist INTEGER NOT NULL DEFAULT 0;
+  `,
+  `
+  -- What people add, wishlist, put up for sale and sell, for the friends feed. Only Discogs releases are logged.
+  CREATE TABLE events (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    type       TEXT NOT NULL CHECK (type IN ('added', 'wishlisted', 'listed', 'sold')),
+    release_id INTEGER NOT NULL REFERENCES releases(id) ON DELETE CASCADE,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX events_created_at ON events(created_at);
+  -- Opt-out: leave this user's activity out of other users' feeds (it only appears if they also share their collection or wishlist).
+  ALTER TABLE users ADD COLUMN share_activity INTEGER NOT NULL DEFAULT 1;
+  `,
+  `
+  -- Which shops to show "search" links for on wishlist and record pages (comma-separated ids; the list lives in the web app).
+  ALTER TABLE users ADD COLUMN shops TEXT NOT NULL DEFAULT 'ebay,bandcamp';
+  `,
+  `
+  -- A user's own Discogs account: the username is shown in settings, the personal access token is stored encrypted (see secrets.ts).
+  ALTER TABLE users ADD COLUMN discogs_username TEXT;
+  ALTER TABLE users ADD COLUMN discogs_token TEXT;
+  `,
+  `
+  -- Whether changes made in Cratefolk are sent to that Discogs account.
+  ALTER TABLE users ADD COLUMN discogs_push INTEGER NOT NULL DEFAULT 1;
+  -- Links a copy to its instance in the user's Discogs collection (instance IDs are per user).
+  ALTER TABLE copies ADD COLUMN discogs_instance_id INTEGER;
+  ALTER TABLE copies ADD COLUMN discogs_folder_id INTEGER;
+  CREATE UNIQUE INDEX copies_discogs_instance ON copies(user_id, discogs_instance_id) WHERE discogs_instance_id IS NOT NULL;
+  `,
+  `
+  -- Three-way Discogs sync. A copy remembers what Discogs held for its grades and notes at the last sync (so we can tell
+  -- which side changed), a wishlist item whether it was on the Discogs wantlist, and removals made here are remembered until
+  -- they have been carried out on Discogs. Deletions only sync when the user opts in.
+  ALTER TABLE copies ADD COLUMN sync_media TEXT;
+  ALTER TABLE copies ADD COLUMN sync_sleeve TEXT;
+  ALTER TABLE copies ADD COLUMN sync_notes TEXT;
+  ALTER TABLE copies ADD COLUMN synced_at INTEGER;
+  ALTER TABLE wishlist ADD COLUMN discogs_synced INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE users ADD COLUMN discogs_sync_deletes INTEGER NOT NULL DEFAULT 0;
+  CREATE TABLE discogs_removals (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    kind        TEXT NOT NULL CHECK (kind IN ('copy', 'want')),
+    release_id  INTEGER NOT NULL,
+    instance_id INTEGER NOT NULL DEFAULT 0,
+    folder_id   INTEGER,
+    UNIQUE (user_id, kind, instance_id, release_id)
+  );
+  `,
+]
+
+fs.mkdirSync(config.dataDir, { recursive: true })
+// Cratefolk was called Cratelog (0.4.0-0.6.x) and WaxCrate before that: adopt an existing database (and its WAL files) under the new name.
+const dbFile = path.join(config.dataDir, 'cratefolk.db')
+const legacyDbFile = ['cratelog.db', 'waxcrate.db'].map((name) => path.join(config.dataDir, name)).find((file) => fs.existsSync(file))
+if (!fs.existsSync(dbFile) && legacyDbFile) {
+  for (const suffix of ['', '-wal', '-shm']) if (fs.existsSync(legacyDbFile + suffix)) fs.renameSync(legacyDbFile + suffix, dbFile + suffix)
 }
-export interface Stmt {
-  sql: string
-  params: Param[]
-}
+export const db = new Database(dbFile)
+db.pragma('journal_mode = WAL')
+db.pragma('foreign_keys = ON')
 
-export interface Driver {
-  get(sql: string, params: Param[]): Promise<unknown>
-  all(sql: string, params: Param[]): Promise<unknown[]>
-  run(sql: string, params: Param[]): Promise<RunResult>
-  /** Runs the statements in order as one transaction and returns each one's result. */
-  batch(stmts: Stmt[]): Promise<RunResult[]>
-}
-
-type Named = Record<string, Param>
-type Args = Param[] | [Named]
-
-/** `@name` placeholders in `sql` become positional `?`, filled from the object. Plain positional args pass through. */
-function normalize(sql: string, args: Args): Stmt {
-  const first = args[0]
-  if (args.length === 1 && first !== null && typeof first === 'object' && !(first instanceof Uint8Array)) {
-    const values = first as Named
-    const params: Param[] = []
-    const text = sql.replace(/@([A-Za-z_]\w*)/g, (_, name: string) => {
-      if (!(name in values)) throw new Error(`Missing SQL parameter @${name}`)
-      params.push(values[name])
-      return '?'
-    })
-    return { sql: text, params }
+export function migrate(): void {
+  const current = db.pragma('user_version', { simple: true }) as number
+  for (let v = current; v < migrations.length; v++) {
+    db.transaction(() => {
+      db.exec(migrations[v]!)
+      db.pragma(`user_version = ${v + 1}`)
+    })()
   }
-  return { sql, params: args as Param[] }
-}
-
-let driver: Driver | null = null
-export function setDriver(d: Driver): void {
-  driver = d
-}
-const active = (): Driver => {
-  if (!driver) throw new Error('Database driver not set')
-  return driver
-}
-
-/** A statement to hand to `db.batch`. */
-export const stmt = (sql: string, ...args: Args): Stmt => normalize(sql, args)
-
-export const db = {
-  get: async <T = Record<string, unknown>>(sql: string, ...args: Args): Promise<T | undefined> => {
-    const s = normalize(sql, args)
-    return (await active().get(s.sql, s.params)) as T | undefined
-  },
-  all: async <T = Record<string, unknown>>(sql: string, ...args: Args): Promise<T[]> => {
-    const s = normalize(sql, args)
-    return (await active().all(s.sql, s.params)) as T[]
-  },
-  run: (sql: string, ...args: Args): Promise<RunResult> => {
-    const s = normalize(sql, args)
-    return active().run(s.sql, s.params)
-  },
-  batch: (stmts: Stmt[]): Promise<RunResult[]> => active().batch(stmts),
 }

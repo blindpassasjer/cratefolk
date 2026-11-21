@@ -109,7 +109,7 @@ async function factsFrom(page: Page, leadFrom: number): Promise<Trivia | null> {
 
 const albumLookup = async (artist: string, title: string) => {
   const page = await findArticle(artist, title)
-  return page ? await factsFrom(page, 2) : null
+  return page ? factsFrom(page, 2) : null
 }
 
 const ARTIST_LEAD = /\b(?:is|was|were|are) (?:an?|the) [^.]{0,160}?\b(?:band|singer|musician|rapper|duo|group|dj|producer|composer|songwriter|guitarist|pianist|vocalist|trio|quartet|ensemble|orchestra|artist|collective|project|act|saxophonist|trumpeter|drummer|bassist)\b/i
@@ -129,7 +129,7 @@ async function artistLookup(artist: string): Promise<Trivia | null> {
     inprop: 'url',
   })
   const page = (query?.pages ?? []).find((p) => fold(stripParens(p.title)) === fold(name) && ARTIST_LEAD.test((p.extract ?? '').split(/(?<=\.)\s/)[0] ?? ''))
-  return page ? await factsFrom(page, 1) : null
+  return page ? factsFrom(page, 1) : null
 }
 
 interface CacheSpec {
@@ -137,21 +137,31 @@ interface CacheSpec {
   keyColumn: 'release_id' | 'artist_key'
 }
 
+const inFlight = new Map<string, Promise<Trivia | null>>()
+
 /** Looks a result up in the cache (a stored "nothing found" counts), else asks Wikipedia and stores the answer. Network errors are not stored. */
 async function cached(spec: CacheSpec, key: string | number, fetcher: () => Promise<Trivia | null>): Promise<Trivia | null> {
-  const row = await db.get(`SELECT facts, title, url, fetched_at AS fetchedAt FROM ${spec.table} WHERE ${spec.keyColumn} = ?`, key) as
+  const row = db.prepare(`SELECT facts, title, url, fetched_at AS fetchedAt FROM ${spec.table} WHERE ${spec.keyColumn} = ?`).get(key) as
     | { facts: string | null; title: string | null; url: string | null; fetchedAt: number }
     | undefined
   const stored = row?.facts ? ({ facts: JSON.parse(row.facts) as string[], title: row.title!, url: row.url! } satisfies Trivia) : null
   if (row && Date.now() - row.fetchedAt < (stored ? FOUND_TTL_MS : MISSING_TTL_MS)) return stored
 
+  const flight = `${spec.table}:${key}`
+  let pending = inFlight.get(flight)
+  if (!pending) {
+    pending = fetcher().finally(() => inFlight.delete(flight))
+    inFlight.set(flight, pending)
+  }
   try {
-    const found = await fetcher()
-    await db.run(`INSERT OR REPLACE INTO ${spec.table} (${spec.keyColumn}, facts, title, url, fetched_at) VALUES (?, ?, ?, ?, ?)`, key,
+    const found = await pending
+    db.prepare(`INSERT OR REPLACE INTO ${spec.table} (${spec.keyColumn}, facts, title, url, fetched_at) VALUES (?, ?, ?, ?, ?)`).run(
+      key,
       found ? JSON.stringify(found.facts) : null,
       found?.title ?? null,
       found?.url ?? null,
-      Date.now())
+      Date.now(),
+    )
     return found
   } catch {
     return stored
@@ -193,7 +203,7 @@ const json = <T>(s: string, fallback: T): T => {
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
 /** Facts worked out from the release's own data, so every record has something to show. */
-async function dataFacts(r: ReleaseRow, userId: number): Promise<string[]> {
+function dataFacts(r: ReleaseRow, userId: number): string[] {
   const facts: string[] = []
   const age = new Date().getFullYear() - (r.year ?? NaN)
   if (r.year) facts.push(age > 0 ? `Released in ${r.year}, this record is ${plural(age, 'year')} old.` : `Released in ${r.year}, it is brand new.`)
@@ -219,7 +229,7 @@ async function dataFacts(r: ReleaseRow, userId: number): Promise<string[]> {
   if (tags.length) facts.push(`Filed under ${tags.join(', ')}.`)
 
   const owned = (
-    await db.get('SELECT COUNT(*) AS n FROM copies c JOIN releases x ON x.id = c.release_id WHERE (c.user_id = ? OR c.co_owner_id = ?) AND x.artist = ? COLLATE NOCASE', userId, userId, r.artist) as { n: number }
+    db.prepare('SELECT COUNT(*) AS n FROM copies c JOIN releases x ON x.id = c.release_id WHERE (c.user_id = ? OR c.co_owner_id = ?) AND x.artist = ? COLLATE NOCASE').get(userId, userId, r.artist) as { n: number }
   ).n
   if (owned > 1) facts.push(`You have ${owned} records by ${r.artist} in your collection.`)
 
@@ -227,17 +237,19 @@ async function dataFacts(r: ReleaseRow, userId: number): Promise<string[]> {
 }
 
 /** Fills the Wikipedia caches for a new release in the background, so its page already has trivia the first time it is opened. */
-export async function prefetchTrivia(releaseId: number): Promise<void> {
-  const release = await db.get('SELECT artist, title FROM releases WHERE id = ?', releaseId) as { artist: string; title: string } | undefined
+export function prefetchTrivia(releaseId: number): void {
+  const release = db.prepare('SELECT artist, title FROM releases WHERE id = ?').get(releaseId) as { artist: string; title: string } | undefined
   if (!release) return
-  await cached({ table: 'trivia', keyColumn: 'release_id' }, releaseId, () => albumLookup(release.artist, release.title))
-    .then(async (album) => album ?? await cached({ table: 'artist_trivia', keyColumn: 'artist_key' }, fold(stripParens(release.artist)), () => artistLookup(release.artist)))
+  void cached({ table: 'trivia', keyColumn: 'release_id' }, releaseId, () => albumLookup(release.artist, release.title))
+    .then((album) => album ?? cached({ table: 'artist_trivia', keyColumn: 'artist_key' }, fold(stripParens(release.artist)), () => artistLookup(release.artist)))
     .catch(() => {})
 }
 
 /** Something to say about a release: its album article, else its artist's article, else facts from its own data. */
 export async function triviaFor(releaseId: number, userId: number): Promise<ReleaseTrivia | null> {
-  const release = await db.get('SELECT artist, title, year, country, label, format, genres, styles, tracklist FROM releases WHERE id = ?', releaseId) as ReleaseRow | undefined
+  const release = db
+    .prepare('SELECT artist, title, year, country, label, format, genres, styles, tracklist FROM releases WHERE id = ?')
+    .get(releaseId) as ReleaseRow | undefined
   if (!release) return null
 
   const album = await cached({ table: 'trivia', keyColumn: 'release_id' }, releaseId, () => albumLookup(release.artist, release.title))
@@ -246,5 +258,5 @@ export async function triviaFor(releaseId: number, userId: number): Promise<Rele
   const artist = await cached({ table: 'artist_trivia', keyColumn: 'artist_key' }, fold(stripParens(release.artist)), () => artistLookup(release.artist))
   if (artist) return { source: 'artist', ...artist }
 
-  return { source: 'data', facts: await dataFacts(release, userId), title: null, url: null }
+  return { source: 'data', facts: dataFacts(release, userId), title: null, url: null }
 }
