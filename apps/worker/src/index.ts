@@ -5,7 +5,9 @@ import { setBackgroundKeeper } from '../../server/src/background.js'
 import { runtime } from '../../server/src/config.js'
 import { runSyncJob, setSyncDispatcher } from '../../server/src/discogsSync.js'
 import { purgeOldEvents } from '../../server/src/events.js'
+import { prepareKey } from '../../server/src/secrets.js'
 import { useD1 } from './d1.js'
+import { migrateD1 } from './migrate.js'
 import { useR2Covers } from './r2.js'
 
 export interface Env {
@@ -33,11 +35,14 @@ function setup(env: Env): Promise<void> {
   setSyncDispatcher(async (userId) => {
     await env.SYNC_QUEUE.send({ userId })
   })
-  // Tables come from `wrangler d1 migrations apply`; this only creates or re-syncs the admin from ADMIN_EMAIL / ADMIN_PASSWORD.
-  admin ??= ensureAdmin().catch((e) => {
-    admin = null
-    throw e
-  })
+  // Creates or updates the tables, loads the encryption key, and creates or re-syncs the admin from ADMIN_EMAIL / ADMIN_PASSWORD.
+  admin ??= migrateD1(env.DB)
+    .then(() => prepareKey())
+    .then(() => ensureAdmin())
+    .catch((e) => {
+      admin = null
+      throw e
+    })
   return admin
 }
 

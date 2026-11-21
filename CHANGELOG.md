@@ -3,7 +3,7 @@
 ## Unreleased
 
 ### Added
-- **Cratefolk can run on Cloudflare Workers.** D1 holds the database, R2 the covers, a Queue runs Discogs syncs and a cron trigger clears old sessions. An existing Docker instance can move over with its data, covers and saved Discogs tokens: see [docs/cloudflare.md](docs/cloudflare.md). Docker stays the default and keeps working as before.
+- **Cratefolk can run on Cloudflare Workers.** D1 holds the database, R2 the covers, a Queue runs Discogs syncs and a cron trigger clears old sessions. It is set up from the Cloudflare dashboard by connecting the GitHub repository, and the Worker creates its own tables. An existing Docker instance can move over from the web app: **Account → Import from another Cratefolk** reads your `cratefolk.db` in the browser and brings across users, records, wishlists, crates, share links, covers and (with `secret.key`) saved Discogs connections. See [docs/cloudflare.md](docs/cloudflare.md). Docker stays the default and keeps working as before.
 
 ### Changed
 - The server's database layer is now asynchronous and sits behind one small interface, so the same code runs on SQLite (Docker) and D1. Changes that touch several rows are applied as a single batch, which is atomic on both.

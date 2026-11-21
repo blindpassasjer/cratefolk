@@ -4,10 +4,12 @@ import crypto from 'node:crypto'
 import { hashPassword, requireAdmin, requireUser, sha256, type AppEnv } from '../auth.js'
 import { config } from '../config.js'
 import { db, stmt } from '../db.js'
+import { importRoutes } from './import.js'
 import { registrationOpen } from './auth.js'
 
 export const adminRoutes = new Hono<AppEnv>()
 adminRoutes.use('*', requireUser, requireAdmin)
+adminRoutes.route('/import', importRoutes)
 
 adminRoutes.get('/settings', async (c) => c.json({ registrationOpen: await registrationOpen() }))
 
